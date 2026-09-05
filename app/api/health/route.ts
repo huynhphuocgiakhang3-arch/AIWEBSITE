@@ -1,4 +1,1 @@
-export const runtime = 'nodejs'
-export async function GET() {
-  return Response.json({ ok: true, service: 'hpgk-agent-web', version: '0.6.1', inference: 'worker-proxy', aiApi: false, timestamp: new Date().toISOString() })
-}
+export async function GET(){return Response.json({ok:true,app:"HPGK AGENT",version:"1.2.0",knowledge:"local",aiConfigured:Boolean(process.env.AI_API_KEY)})}

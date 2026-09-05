@@ -1,13 +1,4 @@
-node_modules/
-.next/
-out/
+node_modules
+.next
 .env*
-*.pyc
-__pycache__/
-ai/checkpoints/*.pt
-ai/artifacts/tokenizer/*
-ai/data/processed/*
-ai/data/knowledge.jsonl
-ai/data/experiences.jsonl
-ai/data/learning_queue.jsonl
-ai/data/model_registry.json
+!.env.example

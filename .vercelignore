@@ -1,9 +1,0 @@
-ai/checkpoints/
-ai/data/raw/
-ai/data/processed/
-ai/artifacts/
-notebooks/
-deploy/
-*.pt
-*.pth
-*.safetensors

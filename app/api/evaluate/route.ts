@@ -1,0 +1,2 @@
+import {NextRequest,NextResponse} from "next/server";
+export async function POST(req:NextRequest){const b=await req.json().catch(()=>({}));const answer=String(b.answer||"");const checks=[{name:"Có nội dung",ok:answer.trim().length>0},{name:"Có bằng chứng",ok:/verify|kiểm tra|evidence|bằng chứng/i.test(answer)},{name:"Không khẳng định mù",ok:!/(chắc chắn 100%|guaranteed|đảm bảo tuyệt đối)/i.test(answer)}];return NextResponse.json({ok:true,score:Math.round(checks.filter(x=>x.ok).length/checks.length*100),checks,mode:"deterministic self-check"})}

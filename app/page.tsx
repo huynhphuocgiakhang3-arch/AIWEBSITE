@@ -1,2 +1,1 @@
-import App from "../components/App";
-export default function Page(){return <App/>}
+import HPGK from "../components/HPGK"; export default function Page(){return <HPGK/>}

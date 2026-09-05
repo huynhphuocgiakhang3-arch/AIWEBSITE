@@ -188,3 +188,8 @@ Framework: Next.js
 ```
 
 The `/ai` directory is not executed during the Vercel build.
+
+
+## v0.3.1 Vercel build fix
+
+The Web Studio JSX has been corrected and the root deployment package is ready for Vercel.

@@ -1,30 +1,15 @@
-# VIETCODE-AI v0.3 — Vercel deployment
+# VIETCODE-AI v0.3.1 — Vercel deployment
 
-## Recommended
-Import the repository into Vercel with **Root Directory = repository root**.
+This is the Vercel build-fix release. The previous build failed because `components/App.tsx` contained invalid JSX/string syntax in the Code Lab panel. That code has been rewritten using valid JSX and TypeScript.
 
-The root already contains:
-- package.json
-- next.config.mjs
-- app/
-- components/
+## Vercel settings
 
-So no Root Directory change is required.
+- Framework: Next.js
+- Root Directory: `.`
+- Build Command: `npm run build`
+- Install Command: `npm install`
+- Environment Variables: none required
 
-Build command:
-`npm run build`
+After deployment, check `/api/health` and `/api/version`.
 
-No environment variables are required for v0.3 demo mode.
-
-After deployment:
-- `/` = Web Studio
-- `/api/health` = health check
-- `/api/version` = version/architecture metadata
-
-## Important
-The Python AI core under `ai/` is not executed by Vercel. It remains the from-zero training/evaluation stack and can later be connected to a separate inference worker.
-
-Do not upload large `.pt` checkpoints to the web deployment.
-
-## If your GitHub repo already has another app
-Either use this package as the repository root, or set Vercel Root Directory to the folder containing this `package.json`.
+The Python AI core in `/ai` is not executed by the Vercel build.

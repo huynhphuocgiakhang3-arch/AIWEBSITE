@@ -1,6 +1,6 @@
-# HPGK AGENT v2.1 — AGENT + RAG CORE
+# HPGK AGENT v2.1.1 — AGENT + RAG CORE
 
-HPGK v2.1 chuyển từ knowledge browser thành nền tảng Agent/RAG có thể mở rộng.
+HPGK v2.1.1 chuyển từ knowledge browser thành nền tảng Agent/RAG có thể mở rộng.
 
 - Retrieval: exact phrase + title/term scoring + lazy knowledge packs.
 - Context: knowledge, project, file và memory có thể ghép thành một context.

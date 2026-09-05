@@ -1,6 +1,6 @@
 {
   "name": "hpgk-agent-v2-1-agent-rag",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",

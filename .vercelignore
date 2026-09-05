@@ -1,7 +1,9 @@
-ai/
-web/
-.git/
-*.zip
+ai/checkpoints/
+ai/data/raw/
+ai/data/processed/
+ai/artifacts/
+notebooks/
+deploy/
 *.pt
 *.pth
-__pycache__/
+*.safetensors

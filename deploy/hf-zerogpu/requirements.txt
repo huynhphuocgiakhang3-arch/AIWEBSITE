@@ -1,0 +1,4 @@
+gradio>=4.44
+spaces
+huggingface_hub
+torch>=2.8

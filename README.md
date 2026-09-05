@@ -206,3 +206,12 @@ The independent Python worker lives in `ai/inference/`. It is not invoked by Ver
 The web now proxies `/api/chat` to the worker's `/stream` endpoint and `/api/code` to `/code/stream`. Set `HPGK_INFERENCE_URL` in Vercel to the worker's public HTTPS URL. The browser sends bounded conversation context and open code files; the worker streams generated text using SSE.
 
 See `INFERENCE-DEPLOY.md` for the exact setup.
+
+
+## V0.6 — On-demand compute
+
+V0.6 separates the fast Vercel web from GPU work. Training runs in resumable Kaggle sessions; checkpoints can be published to a model repository; inference is optional/on-demand. No 24/7 GPU is assumed. See `V0.6-SETUP.md` and `V0.6-ARCHITECTURE.md`.
+
+## Google Colab Free training
+
+Use `notebooks/colab/HPGK_AGENT_v0.6_Colab.ipynb`. It stores resumable checkpoints in Google Drive, so Colab sessions can stop without losing progress.

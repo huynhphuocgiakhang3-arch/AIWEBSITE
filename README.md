@@ -1,4 +1,4 @@
-# VIETCODE-AI v0.3
+# HPGK AGENT v0.5
 ### Vietnamese-first Web Coding AI — from-zero training stack
 
 V0.3 is a substantial upgrade over v0.2. It is still a research prototype, but the architecture now separates:
@@ -160,7 +160,7 @@ A from-scratch model with a small architecture and a small corpus will not becom
 
 The goal of v0.3 is to make the **research loop correct and extensible**, so future versions can scale without replacing the whole project.
 
-## V0.4 direction
+## V0.5 direction
 
 - more efficient tokenizer
 - packed binary dataset
@@ -193,3 +193,16 @@ The `/ai` directory is not executed during the Vercel build.
 ## v0.3.1 Vercel build fix
 
 The Web Studio JSX has been corrected and the root deployment package is ready for Vercel.
+
+
+## v0.5 inference worker
+The independent Python worker lives in `ai/inference/`. It is not invoked by Vercel. Start it only after a real checkpoint exists.
+
+## Brand
+**HPGK AGENT** — Vietnamese-first Code Intelligence.
+
+## V0.5 — real worker connection
+
+The web now proxies `/api/chat` to the worker's `/stream` endpoint and `/api/code` to `/code/stream`. Set `HPGK_INFERENCE_URL` in Vercel to the worker's public HTTPS URL. The browser sends bounded conversation context and open code files; the worker streams generated text using SSE.
+
+See `INFERENCE-DEPLOY.md` for the exact setup.

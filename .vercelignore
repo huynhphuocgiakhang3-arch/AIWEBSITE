@@ -1,0 +1,7 @@
+ai/
+web/
+.git/
+*.zip
+*.pt
+*.pth
+__pycache__/

@@ -1,3 +1,10 @@
-import "./globals.css";
-export const metadata={title:"VIETCODE AI v0.3",description:"Vietnamese-first Web Coding AI"};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="vi"><body>{children}</body></html>}
+import './globals.css'
+
+export const metadata = {
+  title: 'HPGK AGENT — Vietnamese Code Intelligence',
+  description: 'A from-zero Vietnamese-first coding AI research workspace.',
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return <html lang="vi"><body>{children}</body></html>
+}

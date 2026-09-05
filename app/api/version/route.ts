@@ -1,11 +1,4 @@
-export const runtime = "nodejs";
+export const runtime = 'nodejs'
 export async function GET() {
-  return Response.json({
-    name: "VIETCODE-AI",
-    version: "0.3.0",
-    architecture: "from-zero-transformer",
-    tokenizer: "custom-bpe",
-    training: "python-core",
-    deployment: "vercel-web"
-  });
+  return Response.json({ name: 'HPGK AGENT', version: '0.5.0', architecture: 'from-zero-transformer', tokenizer: 'custom-bpe', inference: 'independent-worker', streaming: 'sse', context: 'bounded', codingWorkflow: true })
 }

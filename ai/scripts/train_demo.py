@@ -18,5 +18,5 @@ def main():
     model=VietCodeGPT(cfg);opt=torch.optim.AdamW(model.parameters(),lr=3e-4);device="cuda" if torch.cuda.is_available() else "cpu"
     print("device",device,"vocab",tok.vocab_size,"parameters",sum(p.numel() for p in model.parameters()))
     tok.save("artifacts/tokenizer/demo.json")
-    train(model,TokenDataset(tr,cfg.block_size),TokenDataset(va,cfg.block_size),opt,2,8,device,"checkpoints/v0.3-demo.pt",cfg.to_dict(),max_minutes=15,checkpoint_every=50,"artifacts/tokenizer/demo.json")
+    train(model,TokenDataset(tr,cfg.block_size),TokenDataset(va,cfg.block_size),opt,2,8,device,"checkpoints/v0.3-demo.pt",cfg.to_dict(),max_minutes=15,checkpoint_every=50,tokenizer_path="artifacts/tokenizer/demo.json")
 if __name__=="__main__":main()

@@ -1,2 +1,6 @@
-const nextConfig = { reactStrictMode: true };
-export default nextConfig;
+const nextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
+  compress: true,
+}
+export default nextConfig

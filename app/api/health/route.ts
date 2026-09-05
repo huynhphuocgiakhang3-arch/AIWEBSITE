@@ -1,11 +1,4 @@
-export const runtime = "nodejs";
+export const runtime = 'nodejs'
 export async function GET() {
-  return Response.json({
-    ok: true,
-    service: "vietcode-ai-web",
-    version: "0.3.0",
-    inference: "demo",
-    aiApi: false,
-    timestamp: new Date().toISOString()
-  });
+  return Response.json({ ok: true, service: 'hpgk-agent-web', version: '0.5.0', inference: 'worker-proxy', aiApi: false, timestamp: new Date().toISOString() })
 }

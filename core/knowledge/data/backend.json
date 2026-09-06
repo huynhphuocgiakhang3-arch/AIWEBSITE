@@ -1,0 +1,69 @@
+[
+  {
+    "id": "be-idempotency-keys",
+    "domain": "backend",
+    "title": "Idempotency Keys cho API ghi dữ liệu",
+    "concept": "Idempotency key là một mã định danh duy nhất do client tạo ra và gửi kèm request, cho phép server nhận diện và bỏ qua các request trùng lặp (ví dụ do client retry sau timeout) mà không thực thi hành động hai lần.",
+    "why": "Trên mạng thật, client không bao giờ biết chắc một request POST bị timeout là do server không nhận được request, hay do server đã xử lý xong nhưng response bị mất trên đường về. Nếu client tự động retry mà server không có cơ chế idempotency, hành động (ví dụ tạo đơn hàng, trừ tiền) có thể bị thực hiện hai lần.",
+    "how": "Client tạo một UUID cho mỗi 'ý định thao tác' (không phải cho mỗi lần gửi HTTP) và gửi qua header Idempotency-Key. Server lưu kết quả xử lý theo key này (thường trong bảng riêng hoặc cache có TTL); nếu nhận lại cùng key, server trả về đúng response đã lưu thay vì xử lý lại logic nghiệp vụ.",
+    "when_to_use": [
+      "Mọi endpoint ghi dữ liệu có thể được retry bởi client hoặc load balancer (POST tạo tài nguyên, thanh toán, gửi email quan trọng)"
+    ],
+    "when_not_to_use": [
+      "GET và các thao tác vốn đã idempotent tự nhiên (PUT thay thế toàn bộ resource theo đúng chuẩn REST) không bắt buộc cần key riêng"
+    ],
+    "prerequisites": ["Hiểu khái niệm idempotent theo định nghĩa HTTP"],
+    "best_practices": [
+      "Lưu kèm hash của request body cùng idempotency key để phát hiện trường hợp key bị tái sử dụng cho nội dung khác (lỗi client)",
+      "Đặt TTL hợp lý cho bản ghi idempotency (ví dụ 24h) để tránh phình bảng vô hạn"
+    ],
+    "patterns": ["Idempotency middleware chặn ở tầng trước khi request chạm vào business logic"],
+    "anti_patterns": ["Chỉ dựa vào 'kiểm tra trùng' bằng cách so sánh dữ liệu nghiệp vụ (ví dụ số tiền, thời gian) — dễ sai vì hai request hợp lệ khác nhau có thể trông giống nhau"],
+    "common_mistakes": ["Sinh idempotency key ở phía server thay vì client — như vậy mất hết ý nghĩa vì mỗi lần retry sẽ tạo key mới"],
+    "failure_modes": ["Race condition khi hai request cùng idempotency key đến gần như đồng thời và cả hai đều chưa thấy bản ghi đã tồn tại — cần unique constraint ở tầng database, không chỉ kiểm tra rồi ghi"],
+    "debugging": ["Log đầy đủ idempotency key kèm request id để truy vết khi khách hàng báo 'bị trừ tiền hai lần'"],
+    "security": ["Idempotency key không được dùng thay cho authentication — vẫn phải xác thực người gửi request bình thường"],
+    "performance": ["Index trên cột idempotency_key là bắt buộc, nếu không việc tra cứu sẽ chậm dần theo số lượng bản ghi"],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Thêm độ phức tạp lưu trữ và một tầng tra cứu trước mỗi request, đổi lại loại bỏ một lớp lỗi rất khó tái hiện và khó debug sau khi xảy ra"],
+    "related": ["be-rate-limiting"],
+    "confidence": 90,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "be-rate-limiting",
+    "domain": "backend",
+    "title": "Rate Limiting: Token Bucket vs Sliding Window",
+    "concept": "Rate limiting giới hạn số lượng request một client được phép gửi trong một khoảng thời gian. Hai thuật toán phổ biến là Token Bucket (nạp token theo thời gian, mỗi request tiêu một token) và Sliding Window (đếm chính xác số request trong cửa sổ thời gian trượt liên tục).",
+    "why": "Không giới hạn tốc độ, một client (cố ý hoặc do bug) có thể làm quá tải hệ thống, ảnh hưởng đến các client khác dùng chung tài nguyên. Chọn sai thuật toán cũng gây vấn đề: fixed window đơn giản nhưng có 'hiệu ứng biên' cho phép burst gấp đôi giới hạn tại ranh giới cửa sổ.",
+    "how": "Token Bucket: mỗi client có một 'xô' chứa tối đa N token, nạp thêm token theo tốc độ cố định; request chỉ được xử lý nếu còn token, cho phép burst ngắn hạn trong giới hạn dung lượng xô. Sliding Window: theo dõi timestamp của các request gần nhất trong một cửa sổ trượt, tính chính xác số request trong N giây gần nhất bất kể ranh giới cố định.",
+    "when_to_use": [
+      "Token Bucket: API cho phép burst ngắn hạn hợp lý (ví dụ người dùng thao tác nhanh liên tiếp) nhưng giới hạn trung bình dài hạn",
+      "Sliding Window: cần giới hạn chính xác tuyệt đối, không chấp nhận bất kỳ hiệu ứng biên nào (ví dụ giới hạn số lần thử đăng nhập)"
+    ],
+    "when_not_to_use": [
+      "Fixed window đơn giản không nên dùng cho các endpoint nhạy cảm về bảo mật (login, OTP) vì hiệu ứng biên cho phép gấp đôi giới hạn thực tế"
+    ],
+    "prerequisites": [],
+    "best_practices": [
+      "Trả về header Retry-After và mã lỗi 429 rõ ràng để client biết chính xác khi nào nên thử lại",
+      "Áp rate limit theo nhiều tầng: theo IP, theo user, theo API key — không chỉ một tầng duy nhất"
+    ],
+    "patterns": ["Rate limiter tập trung dùng Redis (INCR + EXPIRE hoặc sorted set) để chia sẻ trạng thái giữa nhiều instance server"],
+    "anti_patterns": ["Rate limit lưu trong bộ nhớ local của từng instance khi hệ thống chạy nhiều instance — mỗi instance giới hạn độc lập khiến giới hạn thực tế bị nhân lên theo số instance"],
+    "common_mistakes": ["Không phân biệt giữa lỗi do vượt rate limit (429) và lỗi do request không hợp lệ (400) khiến client không biết nên retry hay sửa request"],
+    "failure_modes": ["Redis rate limiter trở thành single point of failure nếu không có cơ chế fail-open/fail-closed rõ ràng khi Redis down"],
+    "debugging": ["Log số request thực tế theo client_id theo từng phút để đối chiếu với ngưỡng cấu hình khi có khiếu nại 'bị chặn oan'"],
+    "security": ["Rate limit theo IP có thể bị vượt qua bằng cách đổi IP (proxy/botnet) — nên kết hợp thêm rate limit theo tài khoản/API key"],
+    "performance": ["Sliding window chính xác (lưu từng timestamp) tốn bộ nhớ hơn token bucket — cân nhắc sliding window log-approximation cho hệ thống lưu lượng lớn"],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Token bucket đơn giản, hiệu năng cao nhưng cho phép burst; sliding window chính xác hơn nhưng phức tạp và tốn tài nguyên hơn"],
+    "related": ["be-idempotency-keys"],
+    "confidence": 88,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

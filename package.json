@@ -1,25 +1,34 @@
 {
-  "name": "hpgk-agent-v2-1-agent-rag",
-  "version": "2.1.1",
+  "name": "hpgk-agent",
+  "version": "1.0.0",
   "private": true,
+  "description": "HPGK Agent — AI Workspace + Knowledge Engine + Code Agent, xây từ số 0.",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "analyze:knowledge": "node scripts/knowledge-stats.mjs"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test $(find core lib -name '*.test.ts')",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {
-    "next": "14.2.31",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "lucide-react": "0.468.0",
-    "jszip": "^3.10.1"
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "adm-zip": "^0.5.10"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "@types/node": "^22.10.1",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1"
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/adm-zip": "^0.5.5",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

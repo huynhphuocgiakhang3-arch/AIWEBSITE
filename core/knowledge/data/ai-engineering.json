@@ -1,0 +1,99 @@
+[
+  {
+    "id": "ai-rag-chunking",
+    "domain": "ai-engineering",
+    "title": "Chunking Strategy cho RAG",
+    "concept": "Chunking là quá trình chia nhỏ tài liệu nguồn thành các đoạn (chunk) trước khi tạo embedding và lưu vào vector store, để hệ thống retrieval có thể lấy đúng phần thông tin liên quan thay vì toàn bộ tài liệu dài.",
+    "why": "Chunk quá lớn làm loãng embedding (một vector phải đại diện cho quá nhiều ý khác nhau, giảm độ chính xác truy hồi) và tốn context window khi đưa vào prompt. Chunk quá nhỏ làm mất ngữ cảnh (ví dụ cắt đứt một bảng hoặc một đoạn code giữa chừng), khiến câu trả lời model tạo ra bị thiếu thông tin dù retrieval 'đúng' đoạn.",
+    "how": "Chunk theo ranh giới ngữ nghĩa tự nhiên (đoạn văn, section theo heading, hàm/class trong code) thay vì cắt cứng theo số ký tự cố định; dùng overlap (ví dụ 10-20% giữa các chunk liền kề) để giảm rủi ro mất ngữ cảnh ở ranh giới; với tài liệu có cấu trúc (Markdown, code), tận dụng cấu trúc đó (heading, function boundary) làm điểm cắt thay vì cắt mù.",
+    "when_to_use": [
+      "Mọi hệ thống RAG có tài liệu nguồn dài hơn khả năng context window hoặc cần retrieval chọn lọc thay vì nhét toàn bộ vào prompt"
+    ],
+    "when_not_to_use": [
+      "Tài liệu ngắn, có thể đưa toàn bộ vào context window mà không tốn kém — chunking chỉ thêm độ phức tạp không cần thiết"
+    ],
+    "prerequisites": ["Hiểu khái niệm embedding và tìm kiếm tương đồng vector"],
+    "best_practices": [
+      "Lưu kèm metadata (nguồn, section, vị trí) trong mỗi chunk để có thể trích dẫn chính xác nguồn gốc câu trả lời",
+      "Thử nghiệm nhiều kích thước chunk khác nhau trên tập câu hỏi thực tế thay vì chọn một con số 'chuẩn' theo lý thuyết"
+    ],
+    "patterns": ["Hierarchical chunking: chunk nhỏ để retrieval chính xác, nhưng khi trả về thì mở rộng lấy thêm ngữ cảnh xung quanh (parent chunk) trước khi đưa vào prompt"],
+    "anti_patterns": ["Cắt chunk theo số ký tự cố định (ví dụ đúng 500 ký tự) không quan tâm ranh giới câu/đoạn, dẫn đến chunk bắt đầu hoặc kết thúc giữa câu"],
+    "common_mistakes": ["Không có overlap giữa các chunk, khiến thông tin nằm vắt ngang ranh giới hai chunk không được retrieval đầy đủ trong bất kỳ chunk nào"],
+    "failure_modes": ["Retrieval trả về chunk đúng chủ đề nhưng thiếu câu kết luận (nằm ở chunk kế tiếp), khiến model tạo câu trả lời nghe hợp lý nhưng sai lệch"],
+    "debugging": ["Khi model trả lời sai/thiếu, luôn kiểm tra trước tiên các chunk thực sự được retrieval trả về — phần lớn lỗi RAG nằm ở bước retrieval, không phải ở model"],
+    "security": [],
+    "performance": ["Chunk càng nhỏ, số lượng vector càng nhiều, tăng chi phí lưu trữ và thời gian tìm kiếm trong vector store"],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Chunk nhỏ retrieval chính xác hơn nhưng dễ mất ngữ cảnh; chunk lớn giữ ngữ cảnh tốt hơn nhưng retrieval kém chính xác và tốn context window hơn"],
+    "related": ["ai-grounding-provenance"],
+    "confidence": 85,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "ai-grounding-provenance",
+    "domain": "ai-engineering",
+    "title": "Grounding và Provenance để giảm Hallucination",
+    "concept": "Grounding là kỹ thuật buộc câu trả lời của model dựa trên nguồn dữ liệu cụ thể đã được truy hồi (thay vì dựa vào tham số nội tại của model), còn provenance là việc lưu vết rõ ràng câu trả lời (hoặc từng phần câu trả lời) bắt nguồn từ nguồn nào.",
+    "why": "Model ngôn ngữ có xu hướng tạo ra thông tin nghe hợp lý nhưng sai (hallucination) khi không có đủ căn cứ, đặc biệt với các câu hỏi về sự kiện cụ thể, số liệu, hoặc nội dung nằm ngoài phạm vi huấn luyện. Không có provenance, người dùng không có cách nào kiểm chứng độ tin cậy của câu trả lời.",
+    "how": "Chỉ đưa vào prompt các đoạn thông tin đã qua retrieval thực sự (không tự bổ sung 'kiến thức chung' của model vào cùng câu trả lời mà không phân biệt); yêu cầu model trích dẫn rõ nguồn cho từng nhận định; khi retrieval không tìm thấy thông tin liên quan, hệ thống phải trả lời 'không tìm thấy trong nguồn dữ liệu' thay vì để model tự suy đoán và trình bày như sự thật.",
+    "when_to_use": [
+      "Mọi hệ thống trả lời câu hỏi dựa trên tài liệu nội bộ, dữ liệu doanh nghiệp, hoặc bất kỳ ngữ cảnh nào đòi hỏi độ chính xác cao"
+    ],
+    "when_not_to_use": [
+      "Các tác vụ sáng tạo thuần túy (viết truyện, brainstorm ý tưởng) không cần grounding vì bản chất không có 'nguồn sự thật' để đối chiếu"
+    ],
+    "prerequisites": ["ai-rag-chunking"],
+    "best_practices": [
+      "Thiết kế prompt buộc model phân biệt rõ giữa 'thông tin từ nguồn được cung cấp' và 'suy luận thêm của model'",
+      "Hiển thị nguồn trích dẫn cho người dùng cuối để họ tự kiểm chứng, không chỉ tin tưởng mù quáng vào output"
+    ],
+    "patterns": ["Structured output buộc model trả về câu trả lời kèm danh sách source_id tương ứng, thay vì văn bản tự do không có cấu trúc trích dẫn"],
+    "anti_patterns": ["Trộn lẫn context retrieval với hướng dẫn hệ thống mà không phân tách rõ ràng, khiến model khó phân biệt đâu là dữ kiện cần dựa vào"],
+    "common_mistakes": ["Coi 'model có citation' đồng nghĩa với 'câu trả lời chính xác' — model vẫn có thể trích dẫn sai nguồn hoặc diễn giải sai nguồn đã trích, cần cơ chế kiểm tra thêm"],
+    "failure_modes": ["Model trích dẫn một nguồn có thật nhưng nội dung trích dẫn không thực sự khớp với nguồn đó (citation hallucination)"],
+    "debugging": ["Đối chiếu thủ công một mẫu ngẫu nhiên các câu trả lời với nguồn trích dẫn tương ứng để đo tỉ lệ trích dẫn sai theo thời gian"],
+    "security": [],
+    "performance": [],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Grounding chặt chẽ làm giảm khả năng trả lời của hệ thống khi nguồn dữ liệu thiếu thông tin (thà từ chối còn hơn bịa), đây là đánh đổi có chủ đích vì độ tin cậy"],
+    "related": ["ai-rag-chunking"],
+    "confidence": 82,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "ai-agent-loop-guards",
+    "domain": "ai-engineering",
+    "title": "Giới hạn Vòng lặp Agent (max_iterations / timeout)",
+    "concept": "Agent loop guard là các cơ chế giới hạn cứng (số vòng lặp tối đa, thời gian timeout, số lần gọi tool tối đa) áp dụng lên vòng lặp lên kế hoạch–thực thi–kiểm tra của một AI agent, nhằm ngăn agent chạy vô hạn hoặc lặp lại hành động không hiệu quả.",
+    "why": "Một agent dựa trên model ngôn ngữ có thể rơi vào vòng lặp không hội tụ: liên tục gọi lại cùng một tool với input gần giống nhau, hoặc liên tục 'sửa lỗi' theo hướng sai mà không bao giờ đạt điều kiện dừng, gây tốn chi phí API và tài nguyên hệ thống không kiểm soát được.",
+    "how": "Định nghĩa rõ điều kiện dừng thành công (verification pass) VÀ điều kiện dừng thất bại (max_iterations đạt, timeout đạt, phát hiện lặp lại cùng một hành động N lần liên tiếp); mỗi vòng lặp phải tăng bộ đếm và kiểm tra ngưỡng trước khi tiếp tục, không dựa vào model tự quyết định 'khi nào nên dừng'.",
+    "when_to_use": [
+      "Bắt buộc cho MỌI agent có khả năng tự lặp lại hành động dựa trên kết quả trước đó (self-correcting loop, code agent tự sửa lỗi)"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": [],
+    "best_practices": [
+      "Log đầy đủ từng vòng lặp (input, hành động, kết quả) để có thể điều tra khi agent dừng do chạm giới hạn",
+      "Có cơ chế rollback về trạng thái trước đó nếu agent dừng giữa chừng do chạm giới hạn, tránh để lại trạng thái dở dang"
+    ],
+    "patterns": ["Circuit breaker: nếu N vòng liên tiếp không cải thiện được điều kiện kiểm tra, dừng sớm và báo cáo cho người dùng thay vì tiếp tục đến khi chạm max_iterations"],
+    "anti_patterns": ["Đặt max_iterations rất lớn 'để chắc ăn' mà không có cơ chế phát hiện lặp vô ích sớm hơn — vẫn tốn chi phí dù cuối cùng có dừng"],
+    "common_mistakes": ["Chỉ giới hạn số lần gọi model nhưng quên giới hạn số lần gọi tool phụ trợ (ví dụ file system, network call bên trong một vòng lặp)"],
+    "failure_modes": ["Agent báo cáo 'hoàn thành' dù thực chất dừng vì chạm max_iterations chứ không phải vì đã verify thành công — cần phân biệt rõ hai loại kết thúc này trong response"],
+    "debugging": ["Khi agent 'bị treo' hoặc chạy rất lâu, kiểm tra log số vòng lặp và so sánh hành động giữa các vòng để phát hiện lặp lại giống hệt nhau"],
+    "security": ["Giới hạn vòng lặp cũng là giới hạn chi phí — thiếu guard có thể bị lợi dụng để gây tốn kém API (denial of wallet)"],
+    "performance": [],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Giới hạn chặt có thể khiến agent dừng sớm trước khi thực sự giải quyết xong vấn đề phức tạp — cần cân bằng giữa an toàn chi phí và khả năng hoàn thành tác vụ khó"],
+    "related": [],
+    "confidence": 88,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

@@ -1,0 +1,132 @@
+[
+  {
+    "id": "fe-css-stacking-context",
+    "domain": "frontend",
+    "title": "CSS Stacking Context",
+    "concept": "Stacking context là một khái niệm phân tầng độc lập với z-index thuần túy: một phần tử tạo ra stacking context mới sẽ khiến toàn bộ z-index của con cháu nó bị giới hạn bên trong phạm vi của cha đó, bất kể z-index con lớn thế nào.",
+    "why": "Nhiều bug 'z-index không hoạt động' thực chất không phải do giá trị z-index sai, mà do phần tử cha đã vô tình tạo ra một stacking context mới (do transform, opacity < 1, filter, will-change, position + z-index, v.v.), khiến con bị 'nhốt' bên trong tầng đó.",
+    "how": "Một phần tử tạo stacking context mới khi: có position khác static kèm z-index khác auto; opacity < 1; transform, filter, perspective, clip-path khác none; will-change chỉ định một trong các thuộc tính trên; isolation: isolate; hoặc là phần tử gốc <html>. Để debug, truy ngược cây DOM tìm phần tử cha gần nhất tạo stacking context, và so sánh z-index tại đúng tầng đó.",
+    "when_to_use": [
+      "Cần cô lập một vùng UI (ví dụ card có animation) để nó không ảnh hưởng đến z-index toàn cục",
+      "Xây dropdown/modal cần chắc chắn nổi trên mọi thứ khác trong ứng dụng"
+    ],
+    "when_not_to_use": [
+      "Không nên áp isolation: isolate tràn lan 'cho chắc' — nó làm khó debug vì tạo thêm nhiều tầng ẩn"
+    ],
+    "prerequisites": ["Hiểu cascade và specificity cơ bản của CSS"],
+    "best_practices": [
+      "Dùng isolation: isolate một cách có chủ đích tại boundary của component, không phải tại mọi phần tử",
+      "Giữ một thang z-index tập trung (design tokens) thay vì hardcode số tuỳ tiện ở nhiều nơi"
+    ],
+    "patterns": [
+      "Đặt modal/tooltip ở gốc DOM (portal) để tránh bị kẹt trong stacking context của component cha"
+    ],
+    "anti_patterns": [
+      "z-index: 9999 rải rác khắp codebase để 'chữa cháy' từng bug riêng lẻ"
+    ],
+    "common_mistakes": [
+      "Thêm transform: translateZ(0) để tăng hiệu năng nhưng vô tình phá vỡ thứ tự z-index dự kiến"
+    ],
+    "failure_modes": [
+      "Dropdown/tooltip bị che khuất bởi phần tử có z-index thấp hơn nhưng nằm trong stacking context khác"
+    ],
+    "debugging": [
+      "Dùng DevTools > Layers panel (Chrome) để xem trực quan các stacking context",
+      "Tạm thời xoá từng thuộc tính nghi ngờ (transform, opacity, filter) trên phần tử cha để xác định thủ phạm"
+    ],
+    "security": [],
+    "performance": [
+      "Một số thuộc tính tạo stacking context (transform, will-change) cũng tạo compositor layer riêng — hữu ích cho animation mượt nhưng tốn bộ nhớ GPU nếu lạm dụng"
+    ],
+    "accessibility": [],
+    "examples": [
+      {
+        "description": "Modal bị kẹt trong stacking context của card cha do card có transform",
+        "code": ".card { transform: translateY(0); } /* tạo stacking context mới */\n.card .modal { position: fixed; z-index: 9999; } /* vẫn bị giới hạn trong .card */"
+      }
+    ],
+    "tradeoffs": [
+      "Cô lập stacking context giúp dễ suy luận cục bộ nhưng có thể yêu cầu portal/teleport cho các phần tử cần thoát ra ngoài (modal, tooltip)"
+    ],
+    "related": ["fe-portal-pattern"],
+    "confidence": 90,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "fe-portal-pattern",
+    "domain": "frontend",
+    "title": "Portal Pattern cho Modal/Tooltip",
+    "concept": "Portal là kỹ thuật render một phần cây UI (thường là modal, tooltip, dropdown) vào một node DOM khác với vị trí logic của nó trong component tree, thường là ngay dưới <body>.",
+    "why": "Modal render lồng bên trong component cha sẽ thừa hưởng mọi giới hạn CSS của cha: overflow: hidden cắt mất modal, stacking context của cha giới hạn z-index, transform của cha ảnh hưởng đến position: fixed bên trong.",
+    "how": "Trong React, dùng createPortal(children, domNode) để render subtree vào một container riêng (thường tạo sẵn trong layout gốc), trong khi vẫn giữ nguyên state và event bubbling logic theo đúng vị trí component trong tree.",
+    "when_to_use": [
+      "Modal, dialog, toast, tooltip cần đảm bảo luôn nổi trên cùng bất kể vị trí component cha",
+      "Component cha có overflow: hidden hoặc overflow: auto nhưng nội dung con cần tràn ra ngoài"
+    ],
+    "when_not_to_use": [
+      "Nội dung tĩnh không có vấn đề về stacking/overflow — dùng portal không cần thiết làm tăng độ phức tạp debug"
+    ],
+    "prerequisites": ["fe-css-stacking-context"],
+    "best_practices": [
+      "Quản lý focus trap và trả focus về phần tử trigger khi đóng modal (accessibility)",
+      "Đóng portal khi component unmount để tránh leak DOM node"
+    ],
+    "patterns": ["Portal container cố định khai báo một lần trong root layout"],
+    "anti_patterns": ["Tạo DOM node mới cho portal ở mỗi lần render thay vì tái sử dụng"],
+    "common_mistakes": [
+      "Quên rằng event bubbling trong React portal đi theo component tree (React tree), không theo DOM tree thực tế — dễ gây nhầm lẫn khi bắt sự kiện click-outside"
+    ],
+    "failure_modes": ["Click bên trong modal bị hiểu nhầm là click-outside nếu không xử lý đúng React event bubbling"],
+    "debugging": ["Kiểm tra DOM thực tế qua Elements panel để xác nhận modal đã được render đúng container"],
+    "security": [],
+    "performance": [],
+    "accessibility": [
+      "Modal phải có role=\"dialog\", aria-modal=\"true\", quản lý focus trap và hỗ trợ đóng bằng phím Escape"
+    ],
+    "examples": [],
+    "tradeoffs": ["Portal giải quyết vấn đề CSS nhưng làm phức tạp thêm việc suy luận về event bubbling"],
+    "related": ["fe-css-stacking-context"],
+    "confidence": 88,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "fe-container-queries",
+    "domain": "frontend",
+    "title": "Container Queries",
+    "concept": "Container query cho phép một phần tử thay đổi style dựa trên kích thước của container cha chứa nó, thay vì dựa trên kích thước toàn bộ viewport như media query.",
+    "why": "Một component (ví dụ card) có thể được đặt trong sidebar hẹp hoặc main content rộng trên cùng một trang — media query dựa trên viewport không thể biểu đạt được sự khác biệt ngữ cảnh này, dẫn đến component không thực sự 'tái sử dụng được' về mặt responsive.",
+    "how": "Khai báo container-type: inline-size trên phần tử cha để nó trở thành 'query container', sau đó dùng @container (min-width: 400px) { ... } để style con thay đổi theo kích thước cha đó.",
+    "when_to_use": [
+      "Component dùng lại ở nhiều vị trí layout khác nhau (card trong grid, sidebar, modal)",
+      "Design system cần component tự thích ứng độc lập với layout tổng thể"
+    ],
+    "when_not_to_use": [
+      "Layout cấp trang tổng thể (page-level) vẫn nên dùng media query vì nó phản ánh đúng ngữ cảnh viewport"
+    ],
+    "prerequisites": ["Hiểu CSS box model và containing block"],
+    "best_practices": [
+      "Đặt container-type ở mức component wrapper thấp nhất có thể, tránh áp lên toàn bộ layout gây tính toán thừa"
+    ],
+    "patterns": ["Kết hợp container query với CSS variables để component tự điều chỉnh spacing/typography theo container"],
+    "anti_patterns": ["Query container quá lớn (ví dụ toàn bộ <body>) khiến container query hoạt động gần như media query nhưng tốn hiệu năng hơn"],
+    "common_mistakes": ["Quên rằng container-type: inline-size cắt đứt một số hành vi kích thước tự nhiên (kích thước cha không còn phụ thuộc nội dung con theo chiều đó)"],
+    "failure_modes": ["Layout co lại bất thường vì container bị buộc phải có kích thước xác định để container query hoạt động"],
+    "debugging": ["Dùng DevTools để kiểm tra container hiện tại và giá trị container query đang match"],
+    "security": [],
+    "performance": ["Container query tính toán lại khi kích thước container thay đổi — tránh đặt trên phần tử thay đổi kích thước liên tục (ví dụ trong animation loop)"],
+    "accessibility": [],
+    "examples": [
+      {
+        "description": "Card tự chuyển layout ngang khi container đủ rộng",
+        "code": ".card-wrap { container-type: inline-size; }\n@container (min-width: 480px) {\n  .card { flex-direction: row; }\n}"
+      }
+    ],
+    "tradeoffs": ["Linh hoạt hơn media query nhưng cần trình duyệt hỗ trợ hiện đại và tư duy layout khác quen thuộc"],
+    "related": [],
+    "confidence": 85,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "sec-zip-slip",
+    "domain": "security",
+    "title": "Zip Slip / Path Traversal khi giải nén",
+    "concept": "Zip Slip là lỗ hổng xảy ra khi một file ZIP độc hại chứa entry có đường dẫn kiểu '../../etc/passwd' hoặc đường dẫn tuyệt đối, và ứng dụng giải nén ghi thẳng ra đường dẫn đó mà không kiểm tra, dẫn đến ghi đè file ngoài thư mục đích dự kiến.",
+    "why": "Nhiều thư viện giải nén mặc định chỉ nối chuỗi thư mục đích với tên entry trong ZIP mà không chuẩn hoá (normalize) và kiểm tra kết quả — kẻ tấn công có thể lợi dụng điều này để ghi file tuỳ ý lên hệ thống (ví dụ ghi đè cron job, webshell vào thư mục web root).",
+    "how": "Với mỗi entry trong ZIP: chuẩn hoá đường dẫn đích bằng path.resolve/path.normalize, sau đó kiểm tra đường dẫn kết quả có còn nằm bên trong thư mục đích dự kiến hay không (so sánh prefix sau khi resolve). Từ chối xử lý toàn bộ file ZIP nếu phát hiện bất kỳ entry nào vi phạm — không chỉ bỏ qua entry đó và tiếp tục.",
+    "when_to_use": [
+      "Bắt buộc áp dụng cho MỌI tính năng cho phép người dùng upload và giải nén file nén (ZIP, TAR, RAR)"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": ["Hiểu path.resolve và sự khác biệt giữa đường dẫn tương đối/tuyệt đối"],
+    "best_practices": [
+      "Giải nén vào một thư mục tạm riêng biệt cho mỗi lần upload (ví dụ theo UUID), không bao giờ giải nén thẳng vào thư mục dùng chung",
+      "Giới hạn độ sâu thư mục và tổng số entry được phép trong một file ZIP",
+      "Từ chối symlink trong ZIP hoặc resolve rồi kiểm tra target của symlink cũng phải nằm trong thư mục đích"
+    ],
+    "patterns": ["Whitelist theo phần mở rộng file được phép xử lý sau khi giải nén, thay vì xử lý mọi loại file không giới hạn"],
+    "anti_patterns": ["Dùng thẳng extractAllTo() của thư viện zip mà không có bước validate entry trước"],
+    "common_mistakes": ["Chỉ kiểm tra chuỗi '../' trong tên entry bằng string match — không đủ vì có thể encode khác (ví dụ '..\\\\' trên Windows, hoặc dùng ký tự Unicode tương đương) — phải resolve đường dẫn thật sự rồi so sánh, không match chuỗi thô"],
+    "failure_modes": ["Zip bomb: file ZIP nhỏ nhưng giải nén ra dung lượng khổng lồ (nén lồng nhiều lớp) làm cạn kiệt dung lượng đĩa/bộ nhớ — cần giới hạn kích thước giải nén tối đa và số lượng entry, kiểm tra tỉ lệ nén bất thường"],
+    "debugging": ["Log toàn bộ entry bị từ chối kèm lý do (path traversal / oversized / symlink / extension không hợp lệ) để phân tích khi có báo cáo bảo mật"],
+    "security": [
+      "Đây bản thân là một entry về bảo mật — luôn coi nội dung ZIP do người dùng upload là không đáng tin cậy tuyệt đối"
+    ],
+    "performance": ["Kiểm tra entry trước khi giải nén (đọc central directory) rẻ hơn nhiều so với giải nén rồi mới phát hiện vấn đề"],
+    "accessibility": [],
+    "examples": [
+      {
+        "description": "Kiểm tra path traversal trước khi ghi file",
+        "code": "const destPath = path.resolve(targetDir, entryName);\nif (!destPath.startsWith(path.resolve(targetDir) + path.sep)) {\n  throw new Error('Zip Slip detected: ' + entryName);\n}"
+      }
+    ],
+    "tradeoffs": ["Kiểm tra nghiêm ngặt có thể từ chối một số file ZIP hợp lệ nhưng có cấu trúc lạ — chấp nhận được vì ưu tiên an toàn hơn tiện lợi"],
+    "related": ["sec-file-upload-validation"],
+    "confidence": 95,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "sec-file-upload-validation",
+    "domain": "security",
+    "title": "Xác thực File Upload",
+    "concept": "Xác thực file upload là tập hợp các bước kiểm tra một file do người dùng gửi lên trước khi lưu trữ hoặc xử lý: kiểm tra kích thước, loại nội dung thực tế (không chỉ đuôi file hay Content-Type client khai báo), và quét các dấu hiệu nguy hiểm.",
+    "why": "Đuôi file (.jpg) và header Content-Type do client gửi lên hoàn toàn có thể bị giả mạo — một file thực chất là script thực thi có thể được đặt tên '.jpg' để vượt qua kiểm tra hời hợt, sau đó gây hại nếu server hoặc trình duyệt xử lý sai loại nội dung.",
+    "how": "Kiểm tra magic bytes (file signature) ở đầu file để xác định loại thực tế thay vì tin vào tên/đuôi file; giới hạn kích thước tối đa theo từng loại tài nguyên; đổi tên file khi lưu trữ (dùng UUID) thay vì giữ nguyên tên gốc do người dùng đặt; phục vụ file upload từ một domain/subdomain riêng không có quyền thực thi script.",
+    "when_to_use": ["Mọi endpoint nhận file upload từ người dùng, kể cả người dùng đã đăng nhập và được tin tưởng"],
+    "when_not_to_use": [],
+    "prerequisites": [],
+    "best_practices": [
+      "Không bao giờ dùng tên file gốc do người dùng cung cấp làm đường dẫn lưu trữ trực tiếp",
+      "Lưu file upload bên ngoài thư mục có thể được web server thực thi as code"
+    ],
+    "patterns": ["Xử lý upload bất đồng bộ: nhận file, quét/validate trong background job, chỉ đánh dấu 'sẵn sàng sử dụng' sau khi qua kiểm tra"],
+    "anti_patterns": ["Chỉ kiểm tra đuôi file (endsWith('.zip')) để quyết định có xử lý file như ZIP hay không"],
+    "common_mistakes": ["Giới hạn kích thước file ở phía client (JavaScript) mà quên giới hạn tương ứng ở phía server — giới hạn client dễ dàng bị bỏ qua"],
+    "failure_modes": ["Server hết dung lượng đĩa do không giới hạn tổng dung lượng upload theo user/thời gian, chỉ giới hạn từng file riêng lẻ"],
+    "debugging": ["Log magic bytes phát hiện được kèm loại file client khai báo để phát hiện các lần cố tình giả mạo"],
+    "security": ["Kết hợp với sec-zip-slip khi loại file upload là archive"],
+    "performance": [],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Kiểm tra magic bytes kỹ lưỡng tốn thêm một chút thời gian xử lý mỗi upload, chấp nhận được so với rủi ro bảo mật"],
+    "related": ["sec-zip-slip"],
+    "confidence": 90,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

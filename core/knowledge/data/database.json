@@ -1,0 +1,73 @@
+[
+  {
+    "id": "db-n-plus-one",
+    "domain": "database",
+    "title": "N+1 Query Problem",
+    "concept": "N+1 query là tình trạng ứng dụng thực hiện 1 truy vấn để lấy danh sách N bản ghi, sau đó thực hiện thêm N truy vấn riêng lẻ để lấy dữ liệu liên quan cho từng bản ghi, thay vì gộp thành một (hoặc một vài) truy vấn duy nhất.",
+    "why": "Mỗi round-trip đến database có độ trễ mạng cố định, kể cả khi truy vấn rất nhanh. Với N=1000, việc thực hiện 1001 truy vấn tuần tự có thể chậm hơn hàng trăm lần so với 1-2 truy vấn gộp, dù tổng lượng dữ liệu đọc là như nhau.",
+    "how": "Phát hiện bằng cách bật query logging và đếm số lượng truy vấn trên mỗi request — nếu số truy vấn tỉ lệ thuận với số bản ghi trả về, đó là dấu hiệu N+1. Khắc phục bằng JOIN, hoặc dùng kỹ thuật 'eager loading' của ORM (ví dụ include/with) để gộp truy vấn liên quan thành một lần gọi, hoặc dùng DataLoader để batch các truy vấn riêng lẻ trong cùng một tick sự kiện.",
+    "when_to_use": [
+      "Luôn cần kiểm tra khi render danh sách kèm dữ liệu quan hệ (ví dụ danh sách đơn hàng kèm tên khách hàng)"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": ["Hiểu JOIN cơ bản trong SQL"],
+    "best_practices": [
+      "Bật query logger ở môi trường dev để nhìn thấy ngay số lượng truy vấn phát sinh trên mỗi request",
+      "Với GraphQL, dùng DataLoader mặc định cho mọi resolver có khả năng bị gọi lặp lại trong cùng một request"
+    ],
+    "patterns": ["Eager loading khai báo tường minh thay vì lazy loading ngầm định trong ORM"],
+    "anti_patterns": ["Bật lazy loading toàn cục trong ORM 'cho tiện' rồi truy cập thuộc tính quan hệ trong vòng lặp mà không nhận ra mỗi lần truy cập là một truy vấn mới"],
+    "common_mistakes": ["Sửa N+1 bằng cách JOIN nhưng quên rằng JOIN một-nhiều sẽ nhân bản dòng gốc, dẫn đến sai kết quả đếm/tổng nếu không xử lý đúng (group by hoặc truy vấn riêng)"],
+    "failure_modes": ["Ứng dụng chạy nhanh với dữ liệu test nhỏ nhưng sập hiệu năng khi dữ liệu production lớn lên — N+1 thường không lộ ra cho đến khi N đủ lớn"],
+    "debugging": ["Dùng APM (New Relic, Datadog) hoặc log driver của ORM để đếm số query per request trong môi trường staging trước khi lên production"],
+    "security": [],
+    "performance": ["Đây là một trong những nguyên nhân phổ biến nhất gây chậm API — nên là mục kiểm tra đầu tiên khi một endpoint 'bỗng nhiên chậm' sau khi dữ liệu tăng lên"],
+    "accessibility": [],
+    "examples": [
+      {
+        "description": "N+1 điển hình trong vòng lặp",
+        "code": "// Sai: N+1\nconst orders = await db.order.findMany();\nfor (const o of orders) {\n  o.customer = await db.customer.findUnique({ where: { id: o.customerId } });\n}\n\n// Đúng: gộp bằng include\nconst orders = await db.order.findMany({ include: { customer: true } });"
+      }
+    ],
+    "tradeoffs": ["Eager loading luôn lấy đủ dữ liệu liên quan kể cả khi không dùng đến — cần cân bằng giữa số lượng truy vấn và lượng dữ liệu tải thừa"],
+    "related": ["db-indexing-basics"],
+    "confidence": 93,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "db-indexing-basics",
+    "domain": "database",
+    "title": "Index và Chi phí Ghi",
+    "concept": "Index là cấu trúc dữ liệu phụ (thường là B-tree) giúp database tìm bản ghi nhanh hơn theo một hoặc nhiều cột, đánh đổi bằng việc mỗi thao tác ghi (INSERT/UPDATE/DELETE) phải cập nhật thêm cấu trúc index đó.",
+    "why": "Không có index, mọi truy vấn WHERE/JOIN/ORDER BY trên bảng lớn phải quét toàn bộ bảng (sequential scan), độ phức tạp O(n). Nhưng thêm index tràn lan trên mọi cột cũng làm chậm ghi dữ liệu và tốn dung lượng lưu trữ, vì mỗi index là một bản sao dữ liệu được sắp xếp lại.",
+    "how": "Ưu tiên index các cột xuất hiện trong mệnh đề WHERE, JOIN, ORDER BY của các truy vấn chạy thường xuyên nhất — dùng EXPLAIN ANALYZE để xác nhận planner thực sự dùng index đó (seq scan vs index scan) thay vì đoán mò.",
+    "when_to_use": [
+      "Cột dùng để lọc hoặc join thường xuyên trên bảng có số lượng bản ghi lớn",
+      "Cột dùng để sắp xếp kết quả phân trang"
+    ],
+    "when_not_to_use": [
+      "Bảng rất nhỏ (vài trăm dòng) — sequential scan thường nhanh hơn overhead của việc dùng index",
+      "Cột có độ phân tán thấp (ví dụ boolean is_active) hiếm khi hưởng lợi từ index đơn lẻ"
+    ],
+    "prerequisites": ["Hiểu cấu trúc B-tree ở mức khái niệm"],
+    "best_practices": [
+      "Dùng composite index theo đúng thứ tự cột xuất hiện trong WHERE/ORDER BY, vì thứ tự cột trong composite index quyết định index có được dùng hay không",
+      "Định kỳ rà soát các index không còn được dùng (unused index) để loại bỏ, giảm chi phí ghi"
+    ],
+    "patterns": ["Covering index: index chứa đủ toàn bộ cột truy vấn cần, cho phép trả kết quả mà không cần đọc thêm bảng gốc"],
+    "anti_patterns": ["Tạo index riêng lẻ cho từng cột rồi kỳ vọng planner tự kết hợp hiệu quả như một composite index — thực tế thường không tối ưu bằng"],
+    "common_mistakes": ["Thêm index sau khi phát hiện chậm nhưng không dùng EXPLAIN để xác nhận index thực sự được planner chọn dùng"],
+    "failure_modes": ["Index bị 'bloat' theo thời gian trên các bảng có nhiều UPDATE/DELETE, cần định kỳ REINDEX/VACUUM (PostgreSQL) để duy trì hiệu năng"],
+    "debugging": ["EXPLAIN ANALYZE là công cụ đầu tiên trước khi thêm hoặc xoá bất kỳ index nào — không nên đoán"],
+    "security": [],
+    "performance": ["Index tăng tốc đọc nhưng làm chậm ghi tuyến tính theo số lượng index trên bảng — bảng ghi nhiều (write-heavy) cần index tối giản"],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Đọc nhanh hơn nhưng ghi chậm hơn và tốn thêm dung lượng lưu trữ — không có 'càng nhiều index càng tốt'"],
+    "related": ["db-n-plus-one"],
+    "confidence": 90,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

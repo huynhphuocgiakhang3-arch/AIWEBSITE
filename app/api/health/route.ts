@@ -1,1 +1,0 @@
-export async function GET(){return Response.json({ok:true,app:"HPGK AGENT",version:"1.2.0",knowledge:"local",aiConfigured:Boolean(process.env.AI_API_KEY)})}

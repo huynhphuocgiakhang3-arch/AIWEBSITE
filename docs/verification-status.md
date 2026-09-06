@@ -93,6 +93,63 @@ best_practices/common_mistakes/tradeoffs...), biên soạn thủ công — KHÔN
 phải "1.2M+ concepts" như trong ảnh concept UI (đó là số liệu demo cho
 mục đích minh hoạ thiết kế, không phải số liệu thật của hệ thống này).
 
+## Bug thật đã phát hiện SAU khi giao lần 3 (qua `next build` thật trên Vercel) + rà soát chủ động toàn bộ source
+
+Sau lỗi type thật (`Property 'tool' does not exist on type '{...} | {...}'` ở
+`core/agent/pipeline.ts`), tôi không chỉ sửa đúng lỗi đó mà **chủ động rà
+soát lại toàn bộ source** để tìm các lỗi cùng loại trước khi bạn phải
+build lại lần nữa. Kết quả:
+
+**Lỗi thật đã sửa:**
+
+1. **`core/agent/pipeline.ts` — fragile `'in'` narrowing.** `AgentStep.action`
+   trước đây là union giữa `{ tool, input }` (KHÔNG có field `type`) và
+   `{ type: 'respond', content }`. Dùng `'type' in action` để phân biệt
+   không đủ mạnh cho TypeScript narrow đúng ở tất cả các điểm dùng. **Sửa
+   tận gốc:** đổi thành discriminated union THẬT — cả 2 nhánh đều có field
+   `type` (`{ type: 'tool', tool, input }` / `{ type: 'respond', content }`),
+   dùng `switch(action.type)` thay vì `in`. Cập nhật toàn bộ
+   `core/agent/types.ts`, `pipeline.ts`, và mock trong `pipeline.test.ts`
+   (mock cũ thiếu field `type` sẽ khiến logic phát hiện lặp hành động sai
+   ở RUNTIME, không chỉ lỗi kiểu — đã sửa cả hành vi thật, không chỉ vá kiểu).
+
+2. **`import.meta.dirname`** (`core/knowledge/index.ts`) — API Node.js khá
+   mới, không có cách xác nhận trong sandbox này rằng `@types/node` sẽ
+   khai báo type cho nó. **Sửa:** đổi sang `fileURLToPath(import.meta.url)`
+   — pattern ESM chuẩn, chắc chắn tương thích.
+
+3. **`tsconfig.json` thiếu `baseUrl`** đi kèm `paths` — thêm
+   `"baseUrl": "."` để khớp đúng convention Next.js tự sinh, loại bỏ phụ
+   thuộc vào hành vi ngầm định giữa các version TypeScript.
+
+**Đã chủ động quét toàn bộ source (không đợi lỗi tiếp theo mới sửa) cho:**
+- Mọi pattern `'in'` narrowing khác — không còn cái nào ngoài cái đã sửa
+- Mọi union type discriminated khác (`AICompletionResult`) — dùng
+  discriminant `ok: true/false` kiểu boolean, narrowing đáng tin cậy hơn
+  nhiều so với `'in'`, không có vấn đề
+- Non-null assertion (`!`) — **zero** trong toàn bộ source thật (grep xác nhận)
+- `const enum` (cấm dưới `isolatedModules`) — **zero**
+- Re-export type sai cú pháp dưới `isolatedModules` — **zero**
+- Implicit-any trong callback (`.map`, `.filter`...) — tất cả đều có ngữ
+  cảnh kiểu rõ ràng từ mảng đã typed, không có trường hợp nào rủi ro
+- `catch (err)` truy cập `.message` không qua `instanceof Error` guard —
+  **zero**, mọi nơi đều dùng đúng pattern
+- **Mọi import alias `@/...` trong `app/`/`components/`** — đối chiếu
+  từng cái với file thật trên đĩa, **100% khớp**
+- **Mọi import tương đối `.ts` trong `core/`/`lib/`** — đã được CHÍNH 74
+  test thật chứng minh resolve đúng ở runtime (nếu sai, Node đã báo
+  `ERR_MODULE_NOT_FOUND` ngay như lỗi `tokens.css` trước đó)
+- Vị trí `'use client'` (phải là dòng đầu tiên) — đúng ở toàn bộ 9 file cần nó
+- Cấu trúc route Next.js App Router (`route.ts`/`page.tsx`/`layout.tsx`) —
+  khớp đúng convention, không có tên thư mục sai
+
+74/74 test vẫn PASS sau toàn bộ các sửa đổi này.
+
+**Vẫn CHƯA có bằng chứng `next build` thật sự pass đến cuối.** Việc rà
+soát trên dựa trên đọc kỹ ngữ nghĩa TypeScript/Next.js, không phải chạy
+trình biên dịch thật — sandbox vẫn không có mạng. `lib/zip.ts` (phụ thuộc
+`adm-zip`) vẫn là phần rủi ro lớn nhất chưa thể tự xác nhận.
+
 ## Bug thật đã phát hiện SAU khi giao lần 2 (qua build thật trên Vercel)
 
 - **`Module not found: Can't resolve './tokens.css'`** trong

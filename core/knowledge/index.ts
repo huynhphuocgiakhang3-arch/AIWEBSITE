@@ -9,7 +9,16 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { KnowledgeEntry } from './types.ts';
+
+// Dùng import.meta.url + fileURLToPath thay vì import.meta.dirname —
+// import.meta.dirname là API Node.js khá mới (20.11+/21.2+), và không có
+// cách nào xác nhận trong sandbox này (không có mạng) rằng phiên bản
+// @types/node sẽ cài thật sự khai báo type cho nó. fileURLToPath +
+// path.dirname là pattern ESM chuẩn, tương thích mọi version TypeScript/
+// Node.js gần đây — không đánh cược vào một API còn mới.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const REQUIRED_STRING_FIELDS: Array<keyof KnowledgeEntry> = ['id', 'domain', 'title', 'concept', 'why', 'how'];
 const REQUIRED_ARRAY_FIELDS: Array<keyof KnowledgeEntry> = [
@@ -54,7 +63,7 @@ function validateEntry(entry: Partial<KnowledgeEntry>, file: string): KnowledgeV
  * Đọc toàn bộ file .json trong thư mục data/, validate, và trả về danh sách
  * entry hợp lệ kèm danh sách vấn đề THẬT phát hiện được (không che giấu lỗi dữ liệu).
  */
-export async function loadKnowledgeBase(dataDir: string = path.join(import.meta.dirname, 'data')): Promise<LoadKnowledgeResult> {
+export async function loadKnowledgeBase(dataDir: string = path.join(__dirname, 'data')): Promise<LoadKnowledgeResult> {
   const issues: KnowledgeValidationIssue[] = [];
   const entries: KnowledgeEntry[] = [];
   const seenIds = new Set<string>();

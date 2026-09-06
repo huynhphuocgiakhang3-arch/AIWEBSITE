@@ -20,7 +20,7 @@ test('runAgent: does NOT report success when max_iterations is reached without v
   const result = await runAgent({
     tools: [noopTool],
     // Planner luôn trả về hành động khác nhau mỗi lần để tránh trigger repeat-guard trước
-    planner: (history) => ({ tool: 'noop', input: `attempt-${history.length}` }),
+    planner: (history) => ({ type: 'tool', tool: 'noop', input: `attempt-${history.length}` }),
     verifier: () => false, // KHÔNG BAO GIỜ pass
     guardConfig: { maxIterations: 5, maxRepeatedAction: 999 },
   });
@@ -32,7 +32,7 @@ test('runAgent: does NOT report success when max_iterations is reached without v
 test('runAgent: detects repeated identical action and stops (does not loop forever)', async () => {
   const result = await runAgent({
     tools: [noopTool],
-    planner: () => ({ tool: 'noop', input: 'same-input-always' }), // luôn giống hệt nhau
+    planner: () => ({ type: 'tool', tool: 'noop', input: 'same-input-always' }), // luôn giống hệt nhau
     verifier: () => false,
     guardConfig: { maxIterations: 100, maxRepeatedAction: 2 },
   });
@@ -48,7 +48,7 @@ test('runAgent: stops on timeout using injected clock (no real waiting)', async 
     tools: [noopTool],
     planner: (history) => {
       fakeNow += 10_000; // mỗi vòng "trôi" 10 giây theo đồng hồ giả lập
-      return { tool: 'noop', input: `step-${history.length}` };
+      return { type: 'tool', tool: 'noop', input: `step-${history.length}` };
     },
     verifier: () => false,
     guardConfig: { maxIterations: 100, timeoutMs: 25_000, maxRepeatedAction: 999 },
@@ -64,19 +64,20 @@ test('runAgent: calls the correct tool and captures its result', async () => {
   const result = await runAgent({
     tools: [echoTool],
     planner: (history) => {
-      if (history.length === 0) return { tool: 'echo', input: 'hello' };
+      if (history.length === 0) return { type: 'tool', tool: 'echo', input: 'hello' };
       return { type: 'respond', content: 'done' };
     },
     verifier: (history) => {
-      const last = history[history.length - 1];
-      if ('type' in last.action && last.action.type === 'respond') {
+      const lastStep = history.at(-1);
+      if (lastStep && lastStep.action.type === 'respond') {
         called = true;
         return true;
       }
       return false;
     },
   });
-  assert.equal(result.steps[0].result, 'echo:hello');
+  const firstStep = result.steps.at(0);
+  assert.equal(firstStep?.result, 'echo:hello');
   assert.equal(called, true);
   assert.equal(result.succeeded, true);
 });
@@ -84,10 +85,11 @@ test('runAgent: calls the correct tool and captures its result', async () => {
 test('runAgent: unknown tool name produces an error result instead of crashing', async () => {
   const result = await runAgent({
     tools: [noopTool],
-    planner: () => ({ tool: 'does-not-exist', input: 'x' }),
+    planner: () => ({ type: 'tool', tool: 'does-not-exist', input: 'x' }),
     verifier: () => true, // verify pass ngay sau bước đầu để test kết thúc gọn
   });
-  assert.ok(result.steps[0].result?.includes('không tìm thấy tool'));
+  const firstStep = result.steps.at(0);
+  assert.ok(firstStep?.result?.includes('không tìm thấy tool'));
 });
 
 test('runAgent: tool that throws does not crash the whole pipeline', async () => {
@@ -98,9 +100,10 @@ test('runAgent: tool that throws does not crash the whole pipeline', async () =>
   };
   const result = await runAgent({
     tools: [throwingTool],
-    planner: () => ({ tool: 'boom', input: 'x' }),
+    planner: () => ({ type: 'tool', tool: 'boom', input: 'x' }),
     verifier: () => true,
   });
-  assert.ok(result.steps[0].result?.includes('Lỗi khi chạy tool'));
-  assert.ok(result.steps[0].result?.includes('kaboom'));
+  const firstStep = result.steps.at(0);
+  assert.ok(firstStep?.result?.includes('Lỗi khi chạy tool'));
+  assert.ok(firstStep?.result?.includes('kaboom'));
 });

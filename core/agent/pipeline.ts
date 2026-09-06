@@ -18,8 +18,12 @@ import type {
 import { DEFAULT_AGENT_GUARD_CONFIG } from './types.ts';
 
 function actionKey(action: AgentStep['action']): string {
-  if ('type' in action && action.type === 'respond') return `respond:${action.content}`;
-  return `tool:${action.tool}:${action.input}`;
+  switch (action.type) {
+    case 'respond':
+      return `respond:${action.content}`;
+    case 'tool':
+      return `tool:${action.tool}:${action.input}`;
+  }
 }
 
 export interface RunAgentOptions {
@@ -65,7 +69,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
 
     const step: AgentStep = { iteration, action, timestamp: new Date(clock.now()).toISOString() };
 
-    if ('type' in action && action.type === 'respond') {
+    if (action.type === 'respond') {
       step.result = action.content;
       steps.push(step);
     } else {
@@ -88,7 +92,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
       // Dùng thẳng `step` (đã biết chắc chắn là step vừa push) thay vì
       // steps[steps.length - 1] — tránh index access không an toàn kiểu
       // (noUncheckedIndexedAccess coi steps[n] là AgentStep | undefined).
-      const finalResponse = 'type' in step.action && step.action.type === 'respond' ? step.action.content : step.result;
+      const finalResponse = step.action.type === 'respond' ? step.action.content : step.result;
       return { steps, stopReason: 'verified_success', succeeded: true, finalResponse };
     }
   }

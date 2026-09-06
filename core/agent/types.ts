@@ -13,7 +13,15 @@ export interface AgentTool {
 
 export interface AgentStep {
   iteration: number;
-  action: { tool: string; input: string } | { type: 'respond'; content: string };
+  /**
+   * Discriminated union THẬT (cả 2 nhánh đều có field `type`) — tránh
+   * dựa vào suy luận `'type' in action` mong manh giữa một type CÓ field
+   * `type` và một type KHÔNG có field nào tên `type`. TypeScript's `in`
+   * narrowing giữa hai object type không cùng discriminant rõ ràng có
+   * thể không thu hẹp được như mong đợi ở một số trường hợp — dùng
+   * discriminated union tường minh loại bỏ hoàn toàn sự mơ hồ đó.
+   */
+  action: { type: 'tool'; tool: string; input: string } | { type: 'respond'; content: string };
   result?: string;
   timestamp: string;
 }

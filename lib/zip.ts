@@ -55,10 +55,17 @@ export async function analyzeAndExtractZip(
 
   const validation = validateZipArchive(entryMetas, extractDir, config);
   if (!validation.ok) {
-    const reasons = validation.rejectedEntries.map((r) => `${r.entry.name}: ${r.result.detail}`).join('; ');
+    const reasons = [
+      validation.archiveLevelRejection
+        ? `[archive] ${validation.archiveLevelRejection.detail}`
+        : null,
+      ...validation.rejectedEntries.map((r) => `${r.entry.name}: ${r.result.detail}`),
+    ]
+      .filter((r): r is string => r !== null)
+      .join('; ');
     return {
       ok: false,
-      rejectionSummary: `ZIP bị từ chối — ${validation.rejectedEntries.length} entry vi phạm. Chi tiết: ${reasons}`,
+      rejectionSummary: `ZIP bị từ chối. Chi tiết: ${reasons}`,
       extractedFiles: [],
       detectedStack: [],
       totalUncompressedSize: 0,

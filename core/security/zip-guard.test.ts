@@ -112,7 +112,7 @@ test('validateZipArchive: rejects archive exceeding max entry count', () => {
   const entries = Array.from({ length: 6000 }, (_, i) => entry({ name: `file${i}.txt` }));
   const result = validateZipArchive(entries, TARGET_DIR);
   assert.equal(result.ok, false);
-  assert.equal(result.rejectedEntries[0].result.reason, 'too_many_entries');
+  assert.equal(result.archiveLevelRejection?.reason, 'too_many_entries');
 });
 
 test('validateZipArchive: rejects archive exceeding total uncompressed size even if each entry is individually fine', () => {
@@ -122,5 +122,5 @@ test('validateZipArchive: rejects archive exceeding total uncompressed size even
   ); // 20 * 40MB = 800MB > 500MB total cap
   const result = validateZipArchive(entries, TARGET_DIR);
   assert.equal(result.ok, false);
-  assert.ok(result.rejectedEntries.some((r) => r.result.reason === 'total_size_exceeded'));
+  assert.equal(result.archiveLevelRejection?.reason, 'total_size_exceeded');
 });

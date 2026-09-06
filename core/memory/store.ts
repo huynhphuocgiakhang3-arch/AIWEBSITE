@@ -94,9 +94,14 @@ export function findDuplicates(records: MemoryRecord[]): Array<[MemoryRecord, Me
   const duplicates: Array<[MemoryRecord, MemoryRecord]> = [];
 
   for (let i = 0; i < records.length; i++) {
+    const a = records[i];
+    // Về logic không bao giờ undefined vì i < records.length, nhưng
+    // noUncheckedIndexedAccess coi records[i] là MemoryRecord | undefined —
+    // guard này thu hẹp kiểu một cách trung thực, không dùng "!" ép kiểu.
+    if (!a) continue;
     for (let j = i + 1; j < records.length; j++) {
-      const a = records[i];
       const b = records[j];
+      if (!b) continue;
       if (scopeKey(a.scope) !== scopeKey(b.scope)) continue;
       if (a.type !== b.type) continue;
       if (normalize(a.content) === normalize(b.content)) {

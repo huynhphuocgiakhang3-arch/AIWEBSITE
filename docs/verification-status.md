@@ -93,7 +93,53 @@ best_practices/common_mistakes/tradeoffs...), biên soạn thủ công — KHÔN
 phải "1.2M+ concepts" như trong ảnh concept UI (đó là số liệu demo cho
 mục đích minh hoạ thiết kế, không phải số liệu thật của hệ thống này).
 
-## Bug thật đã phát hiện SAU khi giao (qua lần deploy thật của bạn trên Vercel)
+## Bug thật đã phát hiện SAU khi giao lần 2 (qua build thật trên Vercel)
+
+- **`Module not found: Can't resolve './tokens.css'`** trong
+  `app/globals.css`. Lỗi path đơn giản: `tokens.css` nằm ở `styles/`,
+  không cùng thư mục với `app/globals.css`. **Đã sửa:** đổi thành
+  `@import '../styles/tokens.css';`.
+
+- **Rủi ro type-check chưa từng được kiểm tra:** `node
+  --experimental-strip-types` (cách tôi chạy 74 test) chỉ STRIP cú pháp
+  TypeScript, KHÔNG type-check gì cả — nên nó không thể bắt được lỗi
+  kiểu mà `tsc`/`next build` sẽ bắt. Khi rà lại thủ công (vì build sắp
+  chạy full type-check thật), phát hiện 3 lớp vấn đề kiểu thật, đều liên
+  quan tới `"noUncheckedIndexedAccess": true` trong tsconfig (khiến
+  `arr[i]` có kiểu `T | undefined` thay vì `T`):
+
+  1. `core/agent/pipeline.ts` — `steps[steps.length - 1]` dùng để lấy lại
+     step vừa push, trong khi biến `step` đó đã có sẵn trong scope. **Sửa:**
+     dùng thẳng `step` thay vì index lại — loại bỏ hoàn toàn việc index,
+     không phải vá lỗi kiểu.
+  2. `core/security/zip-guard.ts` — hai chỗ dùng `entries[0]` làm "entry
+     đại diện" cho lỗi ở MỨC ARCHIVE (quá nhiều entry / vượt tổng dung
+     lượng). **Sửa tận gốc:** tách hẳn một field mới
+     `archiveLevelRejection` trong `ZipArchiveValidationResult` cho đúng
+     bản chất (đây là lỗi của archive, không phải của một entry cụ thể),
+     bỏ hẳn việc cần một "entry giả" — cấu trúc dữ liệu đúng hơn, không
+     chỉ là né lỗi kiểu. Đã cập nhật 2 test tương ứng và `lib/zip.ts`.
+  3. `core/memory/store.ts` (`findDuplicates`) — `records[i]`/`records[j]`
+     trong vòng lặp lồng nhau. **Sửa:** thêm `if (!a) continue` /
+     `if (!b) continue` ngay sau khi lấy phần tử — thu hẹp kiểu trung
+     thực bằng guard thật, KHÔNG dùng non-null assertion (`!`), đúng yêu
+     cầu "không non-null assertion" đã nêu.
+
+  Đã quét lại toàn bộ `core/`, `lib/`, `app/`, `components/` cho các
+  pattern index nguy hiểm tương tự (`[0]`, `[i]`, `[j]`, `length - 1]`,
+  `.find(...)` không guard) — không còn trường hợp nào chưa được guard
+  đúng. Cũng xác nhận **zero non-null assertion (`!`)** trong toàn bộ
+  source thật (đã grep kiểm tra).
+
+  74/74 test vẫn PASS sau các sửa đổi này (chạy lại xác nhận).
+
+- **Vẫn CHƯA có bằng chứng `next build` thật sự pass.** Những sửa đổi
+  trên dựa trên đọc kỹ lại code với hiểu biết về ngữ nghĩa
+  `noUncheckedIndexedAccess`, KHÔNG phải vì đã chạy `tsc`/`next build`
+  và thấy xanh — sandbox vẫn không có network. Rất có thể còn lỗi type
+  khác chưa lộ ra cho tới khi bạn chạy `next build` thật.
+
+## Bug thật đã phát hiện SAU khi giao lần 1 (qua lần deploy thật của bạn trên Vercel)
 
 - **`npm install` thất bại: ERESOLVE conflict.** `eslint@^9.0.0` không
   tương thích với `eslint-config-next@14.2.x` (yêu cầu peer `eslint ^7

@@ -85,8 +85,10 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
 
     const verified = await options.verifier(steps);
     if (verified) {
-      const last = steps[steps.length - 1];
-      const finalResponse = 'type' in last.action && last.action.type === 'respond' ? last.action.content : last.result;
+      // Dùng thẳng `step` (đã biết chắc chắn là step vừa push) thay vì
+      // steps[steps.length - 1] — tránh index access không an toàn kiểu
+      // (noUncheckedIndexedAccess coi steps[n] là AgentStep | undefined).
+      const finalResponse = 'type' in step.action && step.action.type === 'respond' ? step.action.content : step.result;
       return { steps, stopReason: 'verified_success', succeeded: true, finalResponse };
     }
   }

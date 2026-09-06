@@ -146,6 +146,14 @@ export interface ZipArchiveValidationResult {
   ok: boolean;
   totalUncompressedSize: number;
   entryCount: number;
+  /**
+   * Rejection ở MỨC ARCHIVE (không gắn với một entry cụ thể nào) — ví dụ
+   * quá nhiều entry, hoặc tổng dung lượng vượt giới hạn. Tách riêng khỏi
+   * rejectedEntries thay vì ép một entry "đại diện" giả vào đó — tránh
+   * lỗi kiểu (entries[0] có thể undefined về mặt type) và đúng bản chất
+   * hơn: đây là vấn đề của TOÀN BỘ archive, không phải của MỘT entry.
+   */
+  archiveLevelRejection?: { reason: ZipRejectionReason; detail: string };
   rejectedEntries: Array<{ entry: ZipEntryMeta; result: ZipValidationResult }>;
   acceptedEntries: Array<{ entry: ZipEntryMeta; result: ZipValidationResult }>;
 }
@@ -168,10 +176,11 @@ export function validateZipArchive(
       ok: false,
       totalUncompressedSize: 0,
       entryCount: entries.length,
-      rejectedEntries: [{
-        entry: entries[0],
-        result: { ok: false, reason: 'too_many_entries', detail: `${entries.length} entries vượt giới hạn ${config.maxEntries}` },
-      }],
+      archiveLevelRejection: {
+        reason: 'too_many_entries',
+        detail: `${entries.length} entries vượt giới hạn ${config.maxEntries}`,
+      },
+      rejectedEntries: [],
       acceptedEntries: [],
     };
   }
@@ -192,17 +201,11 @@ export function validateZipArchive(
       ok: false,
       totalUncompressedSize: totalSize,
       entryCount: entries.length,
-      rejectedEntries: [
-        ...rejectedEntries,
-        {
-          entry: entries[0],
-          result: {
-            ok: false,
-            reason: 'total_size_exceeded',
-            detail: `Tổng dung lượng giải nén ${totalSize} bytes vượt giới hạn ${config.maxTotalUncompressedSize} bytes`,
-          },
-        },
-      ],
+      archiveLevelRejection: {
+        reason: 'total_size_exceeded',
+        detail: `Tổng dung lượng giải nén ${totalSize} bytes vượt giới hạn ${config.maxTotalUncompressedSize} bytes`,
+      },
+      rejectedEntries,
       acceptedEntries,
     };
   }

@@ -93,6 +93,27 @@ best_practices/common_mistakes/tradeoffs...), biên soạn thủ công — KHÔN
 phải "1.2M+ concepts" như trong ảnh concept UI (đó là số liệu demo cho
 mục đích minh hoạ thiết kế, không phải số liệu thật của hệ thống này).
 
+## Bug thật đã phát hiện SAU khi giao (qua lần deploy thật của bạn trên Vercel)
+
+- **`npm install` thất bại: ERESOLVE conflict.** `eslint@^9.0.0` không
+  tương thích với `eslint-config-next@14.2.x` (yêu cầu peer `eslint ^7
+  || ^8`). Đây đúng là loại lỗi tôi đã cảnh báo trước trong mục "Những
+  gì CHƯA được chạy" — vì sandbox phát triển không có network nên không
+  thể tự phát hiện lỗi này trước khi giao.
+  **Đã sửa:** hạ `eslint` xuống `^8.57.0`. Cũng hạ `@types/node` từ
+  `^22.0.0` xuống `^20.14.0` để khớp với `engines.node` (>=20) và giảm
+  rủi ro type surface không khớp runtime thật trên Vercel.
+- **Thiếu file cấu hình ESLint.** `package.json` có script
+  `"lint": "eslint ."` nhưng repo chưa từng có `.eslintrc.json` — nếu
+  không phát hiện lỗi ERESOLVE trước, bước lint tiếp theo chắc chắn sẽ
+  fail vì thiếu config. **Đã thêm** `.eslintrc.json` (extends
+  `next/core-web-vitals`).
+- Hai lỗi trên **CHƯA được xác nhận đã hết** bằng một lần `npm install`
+  thành công thật — tôi chỉ sửa dựa trên phân tích version compatibility
+  đã biết (eslint-config-next 14.2.x + eslint 8.x là cặp version chính
+  thức Next.js 14 khuyến nghị), KHÔNG phải vì đã chạy lại và thấy pass.
+  Bạn cần chạy lại `npm install` để xác nhận.
+
 ## Về phạm vi so với spec gốc 47 mục
 
 Spec gốc yêu cầu một hệ điều hành AI đầy đủ (multi-language i18n runtime,

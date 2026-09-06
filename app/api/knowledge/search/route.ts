@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { loadKnowledgeBase } from '@/core/knowledge/index';
-import { retrieve, getKnowledgeStats } from '@/core/knowledge/retrieval';
-import type { KnowledgeDomain } from '@/core/knowledge/types';
+import { loadKnowledgeBase } from '../../../../core/knowledge/index';
+import { retrieve, getKnowledgeStats } from '../../../../core/knowledge/retrieval';
+import type { KnowledgeDomain } from '../../../../core/knowledge/types';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

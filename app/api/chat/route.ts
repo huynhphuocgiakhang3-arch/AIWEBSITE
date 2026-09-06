@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { createJsonTable } from '@/lib/db';
-import { notConfiguredProvider } from '@/core/providers/not-configured-provider';
-import { createAnthropicProvider } from '@/core/providers/anthropic-provider';
-import type { AIMessage } from '@/core/providers/types';
+import { createJsonTable } from '../../../lib/db';
+import { notConfiguredProvider } from '../../../core/providers/not-configured-provider';
+import { createAnthropicProvider } from '../../../core/providers/anthropic-provider';
+import type { AIMessage } from '../../../core/providers/types';
 
 interface ConversationRecord {
   id: string;

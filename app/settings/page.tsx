@@ -1,5 +1,5 @@
-import { loadKnowledgeBase } from '@/core/knowledge/index';
-import { getKnowledgeStats } from '@/core/knowledge/retrieval';
+import { loadKnowledgeBase } from '../../core/knowledge/index';
+import { getKnowledgeStats } from '../../core/knowledge/retrieval';
 
 export default async function SettingsPage() {
   const aiConfigured = Boolean(process.env.ANTHROPIC_API_KEY);

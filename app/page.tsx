@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Composer } from '@/components/chat/Composer';
-import { MessageList, type ChatMessage } from '@/components/chat/MessageList';
+import { Composer } from '../components/chat/Composer';
+import { MessageList, type ChatMessage } from '../components/chat/MessageList';
 
 const QUICK_ACTIONS = ['Xây dựng', 'Phân tích', 'Gỡ lỗi', 'Thiết kế', 'Tối ưu'];
 

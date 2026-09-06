@@ -1,6 +1,6 @@
-import { loadKnowledgeBase } from '@/core/knowledge/index';
-import { getKnowledgeStats } from '@/core/knowledge/retrieval';
-import { KnowledgeSearch } from '@/components/knowledge/KnowledgeSearch';
+import { loadKnowledgeBase } from '../../core/knowledge/index';
+import { getKnowledgeStats } from '../../core/knowledge/retrieval';
+import { KnowledgeSearch } from '../../components/knowledge/KnowledgeSearch';
 
 export default async function KnowledgePage() {
   const { entries, issues } = await loadKnowledgeBase();

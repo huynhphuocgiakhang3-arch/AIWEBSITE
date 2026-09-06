@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import type { ProjectRecord } from '@/lib/project-types';
-import type { DiagnosticIssue, DiagnosticsSummary } from '@/core/diagnostics/rules';
+import type { ProjectRecord } from '../../../lib/project-types';
+import type { DiagnosticIssue, DiagnosticsSummary } from '../../../core/diagnostics/rules';
 
 export default function ProjectDetailPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<ProjectRecord | null>(null);

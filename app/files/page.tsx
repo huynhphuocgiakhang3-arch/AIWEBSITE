@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { ProjectRecord } from '@/lib/project-types';
-import { FileTree } from '@/components/files/FileTree';
-import { CodeViewer } from '@/components/files/CodeViewer';
+import type { ProjectRecord } from '../../lib/project-types';
+import { FileTree } from '../../components/files/FileTree';
+import { CodeViewer } from '../../components/files/CodeViewer';
 
 export default function FilesPage() {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);

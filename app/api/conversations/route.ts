@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import path from 'node:path';
-import { createJsonTable } from '@/lib/db';
+import { createJsonTable } from '../../../lib/db';
 
 interface ConversationRecord {
   id: string;

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import AdmZip from 'adm-zip';
-import { createJsonTable } from '@/lib/db';
-import type { ProjectRecord } from '@/lib/project-types';
+import { createJsonTable } from '../../../../../lib/db';
+import type { ProjectRecord } from '../../../../../lib/project-types';
 
 const DATA_DIR = process.env.HPGK_DATA_DIR ?? path.join(process.cwd(), 'data');
 const projectsTable = createJsonTable<ProjectRecord>(DATA_DIR, 'projects');

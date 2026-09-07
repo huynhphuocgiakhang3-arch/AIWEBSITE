@@ -1,8 +1,8 @@
 {
   "name": "hpgk-agent",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
-  "description": "HPGK — premium local-first autonomous AI engineering workspace, no external AI API required.",
+  "description": "HPGK — focused AI coding assistant with Gemini project editing and GitHub deployment.",
   "type": "module",
   "scripts": {
     "dev": "next dev",

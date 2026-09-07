@@ -1,29 +1,30 @@
-# HPGK Agent — v2.1 Local-First Autonomous Engineering OS
+# HPGK Agent v2.2 — Focused AI Coding Assistant
 
-HPGK v2.1 is a premium AI-engineering workspace designed to run **without an external AI API key**.
+HPGK v2.2 is intentionally focused: a premium chat UI, conversation history, Gemini chat/project editing, and GitHub deployment.
 
-## What works without an API
+## Features
+- Chat-first UI with hamburger history + new chat button.
+- Optional Gemini integration via `GEMINI_API_KEY` or a per-session key entered in the UI.
+- Gemini can return structured file operations so HPGK can edit the current project directly.
+- Local project state is kept in the browser for the demo workflow.
+- GitHub deployment asks for a token only when you choose Deploy; the token is not persisted.
+- Responsive desktop/mobile UI.
 
-- Premium responsive workspace UI
-- Local project scaffolding from prompts
-- Deterministic autonomous mission loop UI
-- File explorer + code inspection
-- Generated live HTML preview
-- Local memory via browser storage
-- Local learning records
-- Built-in knowledge catalogue
-- Mobile/desktop responsive layout
+## Run
 
-## Important distinction
+```bash
+npm install
+npm run dev
+```
 
-“No API” here means **no external AI inference API is required by default**. The local engine is deterministic/template-based; it is not a magically retrained foundation model. A future provider can be added behind the same orchestration layer if desired.
+For server-side Gemini:
 
-## Deploy on Vercel
+```bash
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-3.7-flash
+```
 
-1. Push this folder to GitHub.
-2. Import the repository into Vercel.
-3. Framework: Next.js.
-4. Build command: `npm run build`.
-5. No environment variables are required for the default local-first mode.
+Do not expose the Gemini key in client-side code. HPGK accepts a session key only for the current requests and does not store it in localStorage.
 
-The main UI and core demo workflows do not call Anthropic, OpenAI, Google, OpenRouter, or any other external AI provider.
+## GitHub token
+The deploy endpoint uses GitHub REST API. For an existing repository, the token needs Contents write permission. Creating a new repository may require the appropriate repository administration permission. See GitHub's current fine-grained token permissions.

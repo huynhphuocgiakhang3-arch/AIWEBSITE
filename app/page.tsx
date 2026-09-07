@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 type Message={role:'user'|'assistant';content:string}; type Conversation={id:string;title:string;updatedAt:string;messages?:Message[]}; type FileItem={path:string;content:string}; type ApiState='checking'|'ready'|'missing'|'error';
-const starters=[['Tạo website','Tạo một website hoàn chỉnh từ ý tưởng của tôi','✦'],['Sửa project','Kiểm tra và sửa project hiện tại','⌘'],['Giải thích code','Giải thích đoạn code hoặc kiến trúc này','◇'],['Nghiên cứu','Tìm hiểu công nghệ và cách triển khai','◎']];
+const starters: ReadonlyArray<readonly [string,string,string]> = [['Tạo website','Tạo một website hoàn chỉnh từ ý tưởng của tôi','✦'],['Sửa project','Kiểm tra và sửa project hiện tại','⌘'],['Giải thích code','Giải thích đoạn code hoặc kiến trúc này','◇'],['Nghiên cứu','Tìm hiểu công nghệ và cách triển khai','◎']];
 const LH='hpgk-history-v23',LP='hpgk-project-v23';
 function rel(iso:string){const d=Math.max(0,Date.now()-new Date(iso).getTime());if(d<6e4)return'vừa xong';if(d<36e5)return`${Math.floor(d/6e4)} phút trước`;if(d<864e5)return`${Math.floor(d/36e5)} giờ trước`;return`${Math.floor(d/864e5)} ngày trước`}
 function slug(v:string){return v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s-_]/g,'').trim().replace(/\s+/g,'-').slice(0,48)||'hpgk-project'}

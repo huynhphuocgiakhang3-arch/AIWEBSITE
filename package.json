@@ -1,8 +1,8 @@
 {
   "name": "hpgk-agent",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "HPGK Agent — AI Workspace + Knowledge Engine + Code Agent, xây từ số 0.",
+  "description": "HPGK — premium local-first autonomous AI engineering workspace, no external AI API required.",
   "type": "module",
   "scripts": {
     "dev": "next dev",

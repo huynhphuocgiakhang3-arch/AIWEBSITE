@@ -1,0 +1,2 @@
+import type { AICompletionRequest, AICompletionResult, AIProvider } from './types';
+export function createModelRouter(providers:AIProvider[]){return {list:()=>providers.map(p=>({id:p.id,configured:p.isConfigured()})),async complete(req:AICompletionRequest):Promise<AICompletionResult>{for(const p of providers){if(!p.isConfigured())continue;const r=await p.complete(req);if(r.ok)return r;}return {ok:false,errorCode:'not_configured',message:'Chưa có AI provider khả dụng. HPGK vẫn chạy được UI, project engine và demo agent; thêm provider trong Settings để bật suy luận thật.'}}}}

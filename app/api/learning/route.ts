@@ -1,0 +1,2 @@
+import {NextRequest,NextResponse} from 'next/server';import path from 'node:path';import {learn,listLearning} from '../../../core/learning/engine';
+const root=process.env.HPGK_DATA_DIR??path.join(process.cwd(),'data');export async function GET(){return NextResponse.json({items:await listLearning(root)})}export async function POST(req:NextRequest){const b=await req.json();if(!b.topic)return NextResponse.json({error:'Thiếu topic.'},{status:400});return NextResponse.json(await learn(root,{topic:String(b.topic),source:b.source,summary:b.summary,tags:b.tags}))}

@@ -14,7 +14,7 @@ function safePath(p: string) {
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const apiKey = String(body.apiKey ?? process.env.GEMINI_API_KEY ?? '').trim();
-  const model = String(body.model ?? process.env.GEMINI_MODEL ?? 'gemini-3.7-flash').trim();
+  const model = String(body.model ?? process.env.GEMINI_MODEL ?? 'gemini-3.8-flash').trim();
   const instruction = String(body.instruction ?? '').trim();
   const files = Array.isArray(body.files) ? body.files as FileItem[] : [];
   if (!apiKey) return NextResponse.json({ error: 'Chưa có Gemini API key.' }, { status: 400 });
@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.15,
-        maxOutputTokens: 16000,
+        maxOutputTokens: 32768,
+        thinkingConfig: { thinkingLevel: 'high' },
         responseMimeType: 'application/json',
         responseSchema: {
           type: 'object',

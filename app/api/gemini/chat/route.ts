@@ -7,7 +7,7 @@ type Message = { role: 'user' | 'assistant' | 'system'; content: string };
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const apiKey = String(body.apiKey ?? process.env.GEMINI_API_KEY ?? '').trim();
-  const model = String(body.model ?? process.env.GEMINI_MODEL ?? 'gemini-3.7-flash').trim();
+  const model = String(body.model ?? process.env.GEMINI_MODEL ?? 'gemini-3.8-flash').trim();
   const messages = Array.isArray(body.messages) ? body.messages as Message[] : [];
   if (!apiKey) return NextResponse.json({ error: 'Chưa có Gemini API key.' }, { status: 400 });
   if (!messages.length) return NextResponse.json({ error: 'Chưa có messages.' }, { status: 400 });
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       systemInstruction: system ? { parts: [{ text: system }] } : undefined,
       contents,
-      generationConfig: { temperature: 0.35, maxOutputTokens: 4096 },
+      generationConfig: { maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: 'medium' } },
     }),
   });
   const data = await response.json().catch(() => ({}));

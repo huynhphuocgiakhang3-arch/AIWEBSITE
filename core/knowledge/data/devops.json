@@ -1,0 +1,68 @@
+[
+  {
+    "id": "devops-cicd-basics",
+    "domain": "devops",
+    "title": "CI/CD cho ứng dụng web",
+    "concept": "CI (Continuous Integration) là việc tự động build/test mỗi khi có thay đổi code được push, phát hiện lỗi sớm nhất có thể. CD (Continuous Deployment/Delivery) là tự động triển khai bản đã qua kiểm tra lên môi trường staging/production mà không cần thao tác thủ công.",
+    "why": "Kiểm tra thủ công trước mỗi lần deploy vừa chậm vừa không nhất quán (con người quên bước, mệt mỏi bỏ sót) — pipeline tự động chạy CHÍNH XÁC cùng một bộ kiểm tra mỗi lần, không có ngoại lệ, và phát hiện lỗi ngay khi code được push thay vì đợi tới lúc deploy mới phát hiện.",
+    "how": "Pipeline điển hình: push code → cài dependency → lint → typecheck → test → build → (nếu tất cả pass) deploy tự động lên staging → chạy smoke test trên staging → (cần approve thủ công hoặc tự động) deploy production. Mỗi bước dừng ngay khi có lỗi (fail-fast), không tiếp tục bước sau.",
+    "when_to_use": [
+      "Mọi dự án có nhiều hơn một người đóng góp, hoặc deploy thường xuyên hơn một lần mỗi vài tuần"
+    ],
+    "when_not_to_use": [
+      "Dự án cá nhân rất nhỏ, deploy hiếm khi, có thể tạm dùng verify thủ công (như scripts/verify.sh) trước khi đầu tư thời gian setup pipeline đầy đủ"
+    ],
+    "prerequisites": [],
+    "best_practices": [
+      "Cache dependency (node_modules) giữa các lần chạy CI để giảm thời gian pipeline — cài lại toàn bộ dependency từ đầu mỗi lần build rất lãng phí",
+      "Chạy test song song khi có thể (chia theo file/nhóm) để giảm tổng thời gian pipeline, đặc biệt khi test suite lớn dần theo thời gian"
+    ],
+    "patterns": ["Deploy preview: mỗi pull request tự động có một URL riêng để review trực quan trước khi merge, không cần deploy thủ công để test"],
+    "anti_patterns": ["Pipeline không có bước rollback tự động khi smoke test production thất bại — phát hiện lỗi mà không có cách khôi phục nhanh gần như vô nghĩa"],
+    "common_mistakes": ["Bí mật (API key, secret) bị hardcode trong file cấu hình CI thay vì dùng secret management của platform CI (Environment Variables/Secrets)"],
+    "failure_modes": ["Pipeline pass nhưng production vẫn lỗi vì môi trường staging khác biệt đáng kể so với production (khác biến môi trường, khác phiên bản dependency) — 'pass trên CI' không tự động đảm bảo 'đúng trên production'"],
+    "debugging": ["Log đầy đủ từng bước pipeline, giữ log đủ lâu để điều tra khi có sự cố xảy ra vài ngày sau deploy"],
+    "security": ["Không bao giờ log giá trị secret ra console CI dù chỉ để debug tạm thời — log CI thường lưu trữ lâu dài và có thể truy cập bởi nhiều người hơn dự kiến"],
+    "performance": [],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Deploy tự động hoàn toàn (Continuous Deployment) nhanh nhưng rủi ro cao hơn deploy có approve thủ công (Continuous Delivery) — chọn mức độ tự động hoá phù hợp với mức độ rủi ro dự án chấp nhận được"],
+    "related": [],
+    "confidence": 83,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "devops-zero-downtime-deploy",
+    "domain": "devops",
+    "title": "Deploy không gián đoạn (Zero-downtime Deployment)",
+    "concept": "Zero-downtime deployment là kỹ thuật triển khai phiên bản mới của ứng dụng mà không có khoảng thời gian nào người dùng gặp lỗi/downtime — thường qua rolling update (thay thế dần từng instance) hoặc blue-green deployment (chạy song song hai môi trường, chuyển traffic tức thời).",
+    "why": "Deploy kiểu dừng-hẳn-rồi-khởi-động-lại (restart toàn bộ server cùng lúc) tạo ra khoảng downtime thực sự, dù ngắn — với ứng dụng có traffic liên tục, khoảng downtime này là request thật của người dùng thật bị lỗi.",
+    "how": "Rolling update: thay thế từng instance một, chỉ chuyển traffic sang instance mới sau khi health check xác nhận nó đã sẵn sàng, luôn giữ ít nhất N-1 instance cũ đang phục vụ trong lúc chuyển đổi. Blue-green: chuẩn bị toàn bộ môi trường mới (green) song song với môi trường đang chạy (blue), chuyển 100% traffic sang green chỉ trong một bước tức thời sau khi xác nhận green hoạt động đúng, giữ blue để rollback tức thời nếu cần.",
+    "when_to_use": [
+      "Ứng dụng production có traffic thực tế liên tục, đặc biệt hệ thống có SLA uptime cần đảm bảo"
+    ],
+    "when_not_to_use": [
+      "Ứng dụng nội bộ ít người dùng, có thể chấp nhận cửa sổ bảo trì ngắn đã thông báo trước"
+    ],
+    "prerequisites": [],
+    "best_practices": [
+      "Health check endpoint riêng (không chỉ kiểm tra process đang chạy mà kiểm tra thực sự sẵn sàng phục vụ — kết nối database thành công, cache đã warm-up)",
+      "Đảm bảo phiên bản cũ và mới có thể chạy song song một khoảng thời gian ngắn mà không xung đột (đặc biệt quan trọng với thay đổi schema database)"
+    ],
+    "patterns": ["Database migration tương thích ngược: thêm cột mới nullable trước, deploy code dùng cột mới, sau đó mới xoá cột cũ ở một lần deploy riêng — không bao giờ đổi schema và code cùng lúc theo cách phá vỡ tương thích"],
+    "anti_patterns": ["Migration database phá vỡ tương thích (xoá/đổi tên cột) chạy đồng thời với việc phiên bản code cũ vẫn đang phục vụ traffic trong lúc rolling update"],
+    "common_mistakes": ["Session/state lưu trong bộ nhớ instance cụ thể (in-memory) thay vì lưu trữ chia sẻ (Redis) — khi rolling update chuyển traffic sang instance mới, user đang có session ở instance cũ bị mất trạng thái"],
+    "failure_modes": ["Health check kiểm tra quá hời hợt (chỉ kiểm tra process sống) khiến traffic chuyển sang instance mới trước khi nó thực sự sẵn sàng, gây lỗi ngắn cho một số request"],
+    "debugging": ["Theo dõi error rate và latency theo thời gian thực trong suốt quá trình deploy, không chỉ kiểm tra sau khi deploy xong"],
+    "security": [],
+    "performance": [],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Blue-green cần gấp đôi tài nguyên hạ tầng tạm thời trong lúc chuyển đổi, đổi lại rollback tức thời gần như ngay lập tức; rolling update tiết kiệm tài nguyên hơn nhưng rollback chậm hơn (phải rolling update ngược lại)"],
+    "related": [],
+    "confidence": 82,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

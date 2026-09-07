@@ -1,0 +1,139 @@
+[
+  {
+    "id": "sec-xss",
+    "domain": "security",
+    "title": "Cross-Site Scripting (XSS)",
+    "concept": "XSS là lỗ hổng cho phép kẻ tấn công chèn JavaScript độc hại vào trang web mà nạn nhân xem, khiến script đó chạy trong ngữ cảnh trình duyệt của nạn nhân với đầy đủ quyền truy cập (cookie, localStorage, DOM) như thể đó là code hợp pháp của trang.",
+    "why": "Trình duyệt không có cách nào tự phân biệt 'script hợp pháp của trang' với 'script độc hại bị chèn vào' nếu cả hai đều xuất hiện trong cùng response HTML — mọi input người dùng render ra HTML mà không escape đều là điểm chèn tiềm năng.",
+    "how": "Ba loại chính: Stored XSS (payload lưu trong database, chạy mỗi khi trang render lại — ví dụ bình luận chứa script), Reflected XSS (payload nằm trong URL/query, server phản chiếu thẳng vào response), DOM-based XSS (JavaScript phía client tự ghi input người dùng vào DOM qua innerHTML mà không qua server). Phòng chống: luôn escape output theo đúng ngữ cảnh (HTML entity encoding cho text, URL encoding cho URL, JS string encoding khi chèn vào script) — KHÔNG BAO GIỜ dùng innerHTML/dangerouslySetInnerHTML với dữ liệu chưa qua sanitize.",
+    "when_to_use": [
+      "Áp dụng phòng chống XSS cho MỌI điểm hiển thị dữ liệu do người dùng nhập, không có ngoại lệ 'input này chắc an toàn'"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": [],
+    "best_practices": [
+      "Dùng framework có auto-escape mặc định (React tự escape khi render qua JSX {}, chỉ mất an toàn khi dùng dangerouslySetInnerHTML)",
+      "Content-Security-Policy header giới hạn nguồn script được phép chạy — lớp phòng thủ thứ hai ngay cả khi có lỗi escape sót lọt"
+    ],
+    "patterns": ["Sanitize HTML cho phép (rich text editor output) bằng thư viện chuyên dụng (DOMPurify) thay vì tự viết regex lọc thẻ nguy hiểm"],
+    "anti_patterns": ["Tự viết hàm lọc XSS bằng regex thay thế thẻ <script> — kẻ tấn công có vô số cách né tránh regex đơn giản (ví dụ onerror=, javascript: URL, encoding khác nhau)"],
+    "common_mistakes": ["Nghĩ rằng validate input ở phía client là đủ — validate/escape PHẢI thực hiện ở phía server (hoặc tại điểm render), vì client-side validation có thể bị bỏ qua hoàn toàn"],
+    "failure_modes": ["React dangerouslySetInnerHTML render trực tiếp nội dung từ API bên thứ ba mà không sanitize, dù chính code React của mình không có lỗi gì"],
+    "debugging": ["Kiểm tra bằng cách thử chèn chuỗi test vô hại như <script>alert(1)</script> vào mọi input field, xem nó có bị escape đúng khi hiển thị lại hay không"],
+    "security": ["Đây là chủ đề chính của entry"],
+    "performance": [],
+    "accessibility": [],
+    "examples": [
+      {
+        "description": "Sai và đúng khi render HTML động trong React",
+        "code": "// NGUY HIỂM nếu userComment chưa sanitize:\n<div dangerouslySetInnerHTML={{ __html: userComment }} />\n\n// An toàn: React tự escape:\n<div>{userComment}</div>"
+      }
+    ],
+    "tradeoffs": ["Escape/sanitize nghiêm ngặt đôi khi làm mất định dạng hợp lệ người dùng muốn (in đậm, xuống dòng) — cần whitelist thẻ cho phép rõ ràng thay vì chặn tất cả hoặc cho phép tất cả"],
+    "related": ["sec-csp", "sec-file-upload-validation"],
+    "confidence": 93,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "sec-csrf",
+    "domain": "security",
+    "title": "Cross-Site Request Forgery (CSRF)",
+    "concept": "CSRF là lỗ hổng khiến trình duyệt của nạn nhân (đã đăng nhập vào trang A) tự động gửi request tới trang A khi nạn nhân đang xem trang B độc hại, và trình duyệt tự đính kèm cookie session hợp lệ của trang A vào request đó mà nạn nhân không hề hay biết.",
+    "why": "Trình duyệt tự động gửi cookie phù hợp domain với MỌI request tới domain đó, bất kể request được khởi tạo từ đâu (form ẩn trên trang độc hại, thẻ img với src trỏ về endpoint ghi dữ liệu) — nếu server chỉ dựa vào 'có cookie session hợp lệ' để xác thực mà không kiểm tra thêm, request giả mạo này trông giống hệt request thật.",
+    "how": "Dùng CSRF token: server sinh một token ngẫu nhiên gắn với session, nhúng vào form/request hợp lệ; server chỉ chấp nhận request ghi dữ liệu nếu token khớp — trang độc hại không thể biết token này để giả mạo. Bổ sung: cookie session đặt SameSite=Strict hoặc Lax để trình duyệt không tự gửi cookie đó trong request cross-site.",
+    "when_to_use": [
+      "Mọi request thay đổi trạng thái (POST/PUT/DELETE) dựa trên xác thực qua cookie — API dùng Bearer token trong header (không phải cookie) ít rủi ro CSRF hơn vì trình duyệt không tự đính kèm header đó"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": [],
+    "best_practices": [
+      "SameSite=Lax là mặc định hợp lý cho hầu hết cookie session — chặn được phần lớn kịch bản CSRF cross-site mà vẫn cho phép điều hướng thông thường hoạt động",
+      "Kết hợp CSRF token VÀ SameSite cookie — hai lớp phòng thủ độc lập, không phụ thuộc hoàn toàn vào một cơ chế"
+    ],
+    "patterns": ["Double-submit cookie pattern: gửi token vừa trong cookie vừa trong header, server so khớp hai giá trị"],
+    "anti_patterns": ["Chỉ dựa vào việc kiểm tra Referer/Origin header làm phòng thủ duy nhất — header này có thể bị thiếu hoặc giả mạo trong một số tình huống"],
+    "common_mistakes": ["Bật CORS quá rộng (Access-Control-Allow-Origin: *) kèm Access-Control-Allow-Credentials: true — kết hợp này cho phép trang bất kỳ gửi request kèm credentials, làm CSRF dễ dàng hơn nhiều"],
+    "failure_modes": ["API endpoint GET vô tình cho phép thay đổi trạng thái (ví dụ /delete-account?confirm=true) — GET request có thể bị kích hoạt chỉ bằng một thẻ <img src=\"...\">, không cần JavaScript nào cả"],
+    "debugging": ["Kiểm tra thủ công bằng cách tạo form HTML đơn giản trên domain khác, submit tới endpoint ghi dữ liệu của ứng dụng, xem request có bị chặn đúng hay không"],
+    "security": ["Đây là chủ đề chính của entry"],
+    "performance": [],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["SameSite=Strict an toàn nhất nhưng có thể phá vỡ một số luồng điều hướng hợp lệ từ trang khác (ví dụ link thanh toán từ email) — Lax là điểm cân bằng phổ biến"],
+    "related": ["sec-xss"],
+    "confidence": 90,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "sec-csp",
+    "domain": "security",
+    "title": "Content Security Policy (CSP)",
+    "concept": "CSP là một HTTP response header cho phép trang web khai báo tường minh những nguồn (domain, inline script, v.v.) được phép tải và thực thi tài nguyên (script, style, ảnh, font...), buộc trình duyệt từ chối bất kỳ tài nguyên nào không nằm trong whitelist đó.",
+    "why": "Đây là lớp phòng thủ thứ hai chống XSS: ngay cả khi có một lỗ hổng escape sót lọt khiến kẻ tấn công chèn được thẻ <script> vào trang, CSP nghiêm ngặt có thể ngăn trình duyệt THỰC THI script đó nếu nó không đến từ nguồn được whitelist (ví dụ chặn hoàn toàn inline script).",
+    "how": "Khai báo qua header Content-Security-Policy với các directive như script-src (nguồn script được phép), style-src, img-src, connect-src (nguồn fetch/XHR được phép)... Bắt đầu ở chế độ Content-Security-Policy-Report-Only để thu thập vi phạm mà không chặn thật, phân tích báo cáo, rồi mới chuyển sang chế độ enforce.",
+    "when_to_use": [
+      "Mọi ứng dụng web xử lý dữ liệu người dùng nhạy cảm nên có CSP như lớp phòng thủ bổ sung, không thay thế việc escape/sanitize đúng cách"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": ["sec-xss"],
+    "best_practices": [
+      "Tránh 'unsafe-inline' trong script-src nếu có thể — dùng nonce hoặc hash cho từng inline script cần thiết thay vì cho phép TẤT CẢ inline script",
+      "Triển khai từng bước: report-only trước, theo dõi vi phạm thật qua report-uri, sau đó mới enforce để tránh chặn nhầm chức năng hợp lệ"
+    ],
+    "patterns": ["Nonce-based CSP: server sinh một giá trị ngẫu nhiên mỗi request, gắn vào cả header CSP và thuộc tính nonce của thẻ script hợp lệ"],
+    "anti_patterns": ["Đặt script-src: * để 'cho chắc không lỗi gì' — làm CSP mất hoàn toàn tác dụng phòng thủ"],
+    "common_mistakes": ["Quên rằng CSP áp dụng cho CẢ tài nguyên hợp lệ của bên thứ ba (Google Analytics, font CDN, widget chat) — bật CSP nghiêm ngặt mà không audit trước dễ làm gãy các tích hợp đang hoạt động"],
+    "failure_modes": ["CSP report-only bị bỏ qua không ai xem báo cáo, không bao giờ chuyển sang enforce — có cấu hình nhưng không thực sự bảo vệ gì"],
+    "debugging": ["Console trình duyệt hiển thị rõ ràng tài nguyên nào bị CSP chặn kèm lý do — đây là công cụ debug chính khi triển khai CSP mới"],
+    "security": ["Đây là chủ đề chính của entry"],
+    "performance": [],
+    "accessibility": [],
+    "examples": [
+      {
+        "description": "CSP header cơ bản nghiêm ngặt",
+        "code": "Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{random}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+      }
+    ],
+    "tradeoffs": ["CSP nghiêm ngặt đòi hỏi audit kỹ mọi tài nguyên bên thứ ba đang dùng — chi phí triển khai ban đầu cao nhưng giá trị phòng thủ dài hạn lớn"],
+    "related": ["sec-xss"],
+    "confidence": 85,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "sec-session-auth",
+    "domain": "security",
+    "title": "Quản lý Session và Token xác thực",
+    "concept": "Có hai mô hình chính để duy trì trạng thái đăng nhập: session-based (server lưu trạng thái, trình duyệt chỉ giữ một session ID trong cookie) và token-based (thường là JWT — toàn bộ thông tin xác thực nằm trong chính token, server không cần lưu trạng thái).",
+    "why": "Lựa chọn sai mô hình hoặc triển khai sai cả hai đều dẫn tới lỗ hổng nghiêm trọng: session cookie không có cờ bảo mật đúng bị đánh cắp qua XSS; JWT không có cơ chế thu hồi khiến token bị lộ vẫn có giá trị dùng được tới khi hết hạn dù đã đổi mật khẩu.",
+    "how": "Session cookie: luôn đặt HttpOnly (JavaScript không đọc được, chống XSS đánh cắp cookie), Secure (chỉ gửi qua HTTPS), SameSite phù hợp. JWT: ký bằng thuật toán mạnh (RS256 hoặc HS256 với secret đủ dài), thời hạn ngắn (access token) kết hợp refresh token riêng để cân bằng bảo mật và trải nghiệm, và có cơ chế blacklist/revocation cho trường hợp cần vô hiệu hoá sớm (đổi mật khẩu, đăng xuất toàn bộ thiết bị).",
+    "when_to_use": [
+      "Session-based: ứng dụng web truyền thống, cần khả năng thu hồi ngay lập tức (đăng xuất tức thì có hiệu lực)",
+      "Token-based (JWT): hệ thống phân tán nhiều service, cần xác thực không trạng thái giữa các service khác nhau"
+    ],
+    "when_not_to_use": [
+      "JWT không phù hợp nếu cần khả năng thu hồi tức thì mà không có lớp blacklist bổ sung — bản chất stateless của JWT nghĩa là token vẫn hợp lệ tới khi hết hạn dù bạn 'đăng xuất' phía client"
+    ],
+    "prerequisites": [],
+    "best_practices": [
+      "Không bao giờ lưu JWT trong localStorage nếu tránh được — localStorage có thể bị đọc bởi bất kỳ script nào chạy trên trang (kể cả script độc hại từ XSS); ưu tiên HttpOnly cookie",
+      "Access token thời hạn ngắn (phút) + refresh token thời hạn dài hơn lưu an toàn hơn (HttpOnly cookie) là mô hình cân bằng phổ biến"
+    ],
+    "patterns": ["Refresh token rotation: mỗi lần dùng refresh token để lấy access token mới, cấp luôn một refresh token mới và vô hiệu hoá cái cũ — phát hiện được nếu refresh token bị đánh cắp và dùng song song"],
+    "anti_patterns": ["Nhúng thông tin nhạy cảm (mật khẩu, dữ liệu cá nhân chi tiết) trực tiếp vào payload JWT — JWT chỉ được ký (signed), KHÔNG được mã hoá (encrypted) mặc định, ai cũng decode đọc được nội dung"],
+    "common_mistakes": ["Không kiểm tra thời hạn (exp) hoặc chữ ký JWT đầy đủ ở phía server, chỉ decode lấy dữ liệu ra dùng mà bỏ qua bước verify"],
+    "failure_modes": ["Secret ký JWT bị hardcode trong source hoặc quá ngắn/dễ đoán, cho phép kẻ tấn công tự tạo JWT hợp lệ giả mạo bất kỳ user nào"],
+    "debugging": ["jwt.io để decode và kiểm tra cấu trúc JWT khi debug (KHÔNG paste JWT thật chứa dữ liệu nhạy cảm vào công cụ online của bên thứ ba trong môi trường production)"],
+    "security": ["Đây là chủ đề chính của entry"],
+    "performance": ["JWT stateless giúp giảm tải cho database session ở hệ thống rất lớn nhiều service, đổi lại mất khả năng thu hồi tức thì"],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Session-based đơn giản, thu hồi tức thì, nhưng cần lưu trạng thái tập trung (khó scale ngang thuần tuý); JWT scale tốt hơn nhưng phức tạp hơn khi cần thu hồi"],
+    "related": ["sec-csrf"],
+    "confidence": 87,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

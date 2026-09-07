@@ -1,0 +1,97 @@
+[
+  {
+    "id": "a11y-semantic-html",
+    "domain": "accessibility",
+    "title": "HTML ngữ nghĩa (Semantic HTML)",
+    "concept": "HTML ngữ nghĩa là việc dùng đúng thẻ theo đúng vai trò nội dung (button cho hành động, a cho điều hướng, nav/main/article/aside cho cấu trúc trang, heading h1-h6 theo đúng thứ bậc) thay vì dùng div/span cho mọi thứ rồi style lại bằng CSS.",
+    "why": "Trình đọc màn hình (screen reader) và các công nghệ hỗ trợ khác dựa vào ngữ nghĩa THẬT của thẻ HTML để thông báo cho người dùng biết đây là gì và có thể tương tác như thế nào — một <div onClick> trông giống nút bấm về mặt thị giác nhưng screen reader không biết đó là thứ có thể bấm được, không có thông báo, không nhận focus bằng Tab.",
+    "how": "Dùng <button> cho MỌI hành động kích hoạt bằng JavaScript (không phải điều hướng trang), <a href> cho điều hướng, cấu trúc heading tuần tự không nhảy cấp (h1 → h2 → h3, không nhảy h1 → h3), landmark elements (nav, main, header, footer, aside) để screen reader có thể nhảy nhanh giữa các vùng chức năng.",
+    "when_to_use": [
+      "Luôn luôn, ở mọi phần tử tương tác hoặc cấu trúc trên trang — đây là nền tảng, không phải tính năng tuỳ chọn thêm sau"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": [],
+    "best_practices": [
+      "Kiểm tra: nếu một phần tử phản hồi khi click, nó PHẢI nhận được focus bằng phím Tab và kích hoạt được bằng phím Enter/Space — nếu không, đang dùng sai thẻ",
+      "Chỉ một h1 trên mỗi trang, đại diện cho tiêu đề chính của nội dung trang đó"
+    ],
+    "patterns": ["Landmark roles (nav, main, aside, footer) giúp screen reader user nhảy thẳng tới vùng cần thiết thay vì nghe đọc tuần tự toàn bộ trang"],
+    "anti_patterns": ["<div className=\"button\" onClick={...}>Gửi</div> thay vì <button onClick={...}>Gửi</button>"],
+    "common_mistakes": ["Dùng heading để tạo hiệu ứng chữ to thay vì để cấu trúc nội dung — chọn heading level theo Ý NGHĨA cấu trúc, chỉnh kích thước chữ bằng CSS riêng"],
+    "failure_modes": ["div giả làm button thiếu hoàn toàn keyboard interaction — người dùng chỉ dùng bàn phím (do khuyết tật vận động hoặc đơn giản là thói quen) không thể thao tác được"],
+    "debugging": ["Thử điều hướng toàn bộ trang chỉ bằng phím Tab/Enter/Space, không dùng chuột — nếu có chức năng không thể chạm tới, đó là lỗi accessibility thật"],
+    "security": [],
+    "performance": [],
+    "accessibility": ["Đây là chủ đề chính của entry"],
+    "examples": [],
+    "tradeoffs": ["Đôi khi cần custom component phức tạp (dropdown, combobox) không có thẻ HTML gốc tương ứng — khi đó cần ARIA để bù đắp ngữ nghĩa, xem entry a11y-aria-focus"],
+    "related": ["a11y-aria-focus"],
+    "confidence": 92,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "a11y-aria-focus",
+    "domain": "accessibility",
+    "title": "ARIA và Quản lý Focus",
+    "concept": "ARIA (Accessible Rich Internet Applications) là tập hợp thuộc tính HTML bổ sung ngữ nghĩa cho các thành phần UI phức tạp không có thẻ HTML gốc tương ứng (dropdown tuỳ biến, tab, modal, combobox). Quản lý focus là việc đảm bảo phím Tab di chuyển qua các phần tử theo thứ tự hợp lý và focus được điều hướng đúng khi UI thay đổi động (mở modal, đóng dropdown).",
+    "why": "Nguyên tắc đầu tiên của ARIA chính thức là 'No ARIA is better than Bad ARIA' — ARIA sai có thể làm trải nghiệm TỆ HƠN so với không có gì, vì nó khai báo sai sự thật cho screen reader (ví dụ role=\"button\" trên phần tử không thực sự hoạt động như button sẽ khiến screen reader thông báo sai kỳ vọng cho người dùng).",
+    "how": "Ưu tiên HTML ngữ nghĩa gốc trước (xem a11y-semantic-html), chỉ dùng ARIA khi thực sự không có thẻ gốc tương ứng. Với modal: role=\"dialog\", aria-modal=\"true\", focus trap (Tab không thoát ra ngoài modal khi đang mở), trả focus về đúng phần tử đã trigger mở modal khi đóng. Với thông báo động (toast, live region): aria-live=\"polite\" hoặc \"assertive\" để screen reader tự động đọc nội dung mới xuất hiện.",
+    "when_to_use": [
+      "Component UI phức tạp không có thẻ HTML gốc: custom dropdown, tab panel, modal, tooltip, combobox, slider"
+    ],
+    "when_not_to_use": [
+      "Không dùng ARIA để 'sửa' một phần tử vốn đã sai từ gốc (div giả làm button) — sửa tận gốc bằng đúng thẻ HTML thay vì vá bằng ARIA"
+    ],
+    "prerequisites": ["a11y-semantic-html"],
+    "best_practices": [
+      "Test bằng screen reader thật (NVDA trên Windows miễn phí, VoiceOver có sẵn trên macOS/iOS) — không chỉ dựa vào linter ARIA tĩnh",
+      "Khi mở modal, focus phải chuyển ngay vào bên trong modal (thường là phần tử đầu tiên có thể tương tác hoặc chính modal); khi đóng, focus phải quay lại đúng nút đã mở nó"
+    ],
+    "patterns": ["Focus trap: bắt sự kiện Tab/Shift+Tab bên trong modal, khi tới phần tử cuối/đầu thì vòng lại phần tử đầu/cuối thay vì thoát ra ngoài modal"],
+    "anti_patterns": ["Rải aria-label lên mọi phần tử 'cho chắc' mà không kiểm tra label đó có thực sự mô tả đúng và hữu ích hay không"],
+    "common_mistakes": ["Quên xử lý phím Escape để đóng modal/dropdown — người dùng bàn phím kỳ vọng Escape là cách thoát chuẩn"],
+    "failure_modes": ["Modal mở nhưng focus vẫn ở nền phía sau — người dùng bàn phím Tab tiếp tục điều hướng nội dung bị che khuất phía sau modal, hoàn toàn không biết modal đã mở"],
+    "debugging": ["Chrome DevTools > Accessibility tree để xem cách trình duyệt diễn giải ngữ nghĩa ARIA của từng phần tử"],
+    "security": [],
+    "performance": [],
+    "accessibility": ["Đây là chủ đề chính của entry"],
+    "examples": [],
+    "tradeoffs": ["Custom component với đầy đủ ARIA + focus management đúng chuẩn tốn nhiều công sức hơn đáng kể so với dùng thẻ HTML gốc — cân nhắc dùng thư viện đã audit accessibility kỹ (Radix UI, React Aria) thay vì tự xây từ đầu"],
+    "related": ["a11y-semantic-html"],
+    "confidence": 88,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "a11y-color-contrast",
+    "domain": "accessibility",
+    "title": "Độ tương phản màu sắc (Color Contrast)",
+    "concept": "Độ tương phản màu là tỉ lệ chênh lệch độ sáng giữa màu chữ và màu nền, được WCAG quy định ngưỡng tối thiểu để đảm bảo người có thị lực kém hoặc mù màu vẫn đọc được nội dung: tỉ lệ tối thiểu 4.5:1 cho chữ thường, 3:1 cho chữ lớn (từ 18pt hoặc 14pt in đậm trở lên) ở mức AA.",
+    "why": "Thiết kế đẹp về mặt thẩm mỹ (chữ xám nhạt trên nền trắng, chữ trắng mờ trên nền tối) thường xuyên vi phạm ngưỡng tương phản này — đây là một trong những lỗi accessibility phổ biến nhất trên web, ảnh hưởng không chỉ người khiếm thị mà cả người dùng bình thường trong điều kiện ánh sáng mạnh (màn hình ngoài trời) hoặc màn hình chất lượng thấp.",
+    "how": "Kiểm tra tỉ lệ tương phản bằng công cụ (WebAIM Contrast Checker, Chrome DevTools) ngay từ giai đoạn thiết kế design token — không đợi tới lúc review cuối mới kiểm tra. Với dark mode, cẩn thận: text màu sáng thuần (#fff) trên nền tối thuần (#000) có tương phản rất cao nhưng có thể gây chói mỏi mắt; nhiều design system dùng off-white trên nền xám đậm để cân bằng cả tương phản lẫn sự thoải mái thị giác.",
+    "when_to_use": [
+      "Mọi cặp màu chữ/nền trên trang, bao gồm cả trạng thái hover/disabled/placeholder — placeholder mờ thường là nơi vi phạm contrast phổ biến nhất vì bị coi là 'chỉ là gợi ý, không quan trọng'"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": [],
+    "best_practices": [
+      "Định nghĩa contrast ratio ngay trong design tokens (ví dụ --text-muted phải luôn đạt tối thiểu 4.5:1 trên --bg tương ứng), kiểm tra tự động khi token thay đổi",
+      "Không truyền đạt thông tin CHỈ bằng màu sắc (ví dụ chỉ dùng màu đỏ/xanh để báo lỗi/thành công mà không kèm icon hoặc text) — người mù màu không phân biệt được"
+    ],
+    "patterns": [],
+    "anti_patterns": ["Chữ xám nhạt (#999) trên nền trắng cho text 'phụ, không quan trọng' — text vẫn cần đọc được dù là thông tin phụ"],
+    "common_mistakes": ["Test contrast trên màn hình chất lượng cao, độ sáng tối đa trong phòng tối — không đại diện cho điều kiện sử dụng thực tế nhiều người dùng gặp phải"],
+    "failure_modes": [],
+    "debugging": ["Chrome DevTools > Inspect element > phần Contrast ratio hiển thị ngay trong panel Styles khi chọn màu chữ"],
+    "security": [],
+    "performance": [],
+    "accessibility": ["Đây là chủ đề chính của entry"],
+    "examples": [],
+    "tradeoffs": ["Tương phản rất cao đôi khi xung đột với ý đồ thiết kế 'nhẹ nhàng, tinh tế' — giải pháp thường là tăng độ đậm (font-weight) thay vì chỉ dựa vào độ tương phản màu để đạt cả hai mục tiêu"],
+    "related": [],
+    "confidence": 90,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

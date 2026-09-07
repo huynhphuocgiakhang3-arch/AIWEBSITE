@@ -1,6 +1,7 @@
 import { loadKnowledgeBase } from '../../core/knowledge/index';
 import { getKnowledgeStats } from '../../core/knowledge/retrieval';
 import { KnowledgeSearch } from '../../components/knowledge/KnowledgeSearch';
+import { IngestionPanel } from '../../components/knowledge/IngestionPanel';
 
 export default async function KnowledgePage() {
   const { entries, issues } = await loadKnowledgeBase();
@@ -18,6 +19,9 @@ export default async function KnowledgePage() {
             ⚠️ Phát hiện {issues.length} vấn đề khi nạp dữ liệu tri thức — xem log server để biết chi tiết.
           </p>
         )}
+      </div>
+      <div style={{ maxWidth: 760, margin: '0 auto 24px' }}>
+        <IngestionPanel />
       </div>
       <KnowledgeSearch initialStats={stats} />
     </div>

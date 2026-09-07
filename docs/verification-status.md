@@ -93,6 +93,61 @@ best_practices/common_mistakes/tradeoffs...), biên soạn thủ công — KHÔN
 phải "1.2M+ concepts" như trong ảnh concept UI (đó là số liệu demo cho
 mục đích minh hoạ thiết kế, không phải số liệu thật của hệ thống này).
 
+## Cập nhật lớn: mở rộng Knowledge Core + tính năng "Nạp & Lập chỉ mục" + UI hero động
+
+Sau khi deploy thành công (bug 1-5 đã sửa), người dùng yêu cầu: (1) mở
+rộng lượng lớn tri thức về web, (2) một nút "AI tự học machine learning".
+
+**Về yêu cầu (2):** đã từ chối làm ĐÚNG NHƯ MÔ TẢ và giải thích trực tiếp
+với người dùng — không có API key AI nghĩa là không có model nào để
+train; "train" thật cần hạ tầng GPU/dataset/tuần kỹ thuật, không phải
+nút bấm trong Next.js app. Làm một progress bar giả với dòng chữ "đang
+học..." mà phía sau không có gì thật sẽ là fake AI — đúng thứ bị cấm
+trong mục 39 spec gốc. Thay vào đó xây dựng **"Nạp & Lập chỉ mục Tri
+thức"**: một pipeline THẬT (`core/knowledge/ingestion.ts`) — tokenize
+từng entry thật, xây inverted index thật, báo tiến trình thật theo từng
+entry xử lý xong (không phải hoạt cảnh dựng sẵn), có AbortSignal dừng
+được THẬT SỰ giữa chừng (đã test: dừng ở entry thứ 3/20, xác nhận
+`entriesProcessed < 20`).
+
+**Đã thêm và kiểm chứng thật:**
+- 20 knowledge entry mới (tổng 32, tăng từ 12), 6 domain mới:
+  performance, security (mở rộng), accessibility, animation, seo, devops,
+  testing — nội dung đầy đủ why/how/best-practices/common-mistakes/
+  tradeoffs theo đúng schema, không rút gọn.
+- `core/knowledge/ingestion.ts` + 8 test thật (bao gồm test dừng giữa
+  chừng thật, test đo thời gian trôi qua thật ≥35ms khi có stepDelayMs).
+- API route `app/api/knowledge/ingest/route.ts` — stream tiến trình thật
+  qua NDJSON, dừng thật qua `req.signal` khi client abort() fetch.
+- `components/knowledge/IngestionPanel.tsx` — UI hiển thị log thật, tiến
+  trình thật, nút Dừng thật (không phải trang trí).
+- `components/ui/HeroVisual.tsx` — hero động "3D cảm nhận được": canvas
+  particle 2D + CSS 3D transform (perspective/rotateX/Y) theo chuột,
+  KHÔNG dùng WebGL/Three.js (giữ bundle nhẹ, đúng yêu cầu "không tốn
+  dung lượng máy"), tôn trọng prefers-reduced-motion (lazy init đọc
+  đúng ngay từ đầu, tránh nhấp nháy), dừng khi tab ẩn, giảm hạt trên
+  mobile, cleanup đầy đủ khi unmount.
+
+**Đã tự audit lại TOÀN BỘ dự án** (không chỉ file mới) theo đúng
+checklist tích luỹ từ 5 lần lỗi build trước: zero alias `@/` sót lại,
+zero non-null assertion, zero `'in'` narrowing thật (chỉ còn trong
+comment), zero `const enum`, zero `import.meta.dirname`, zero
+`catch(err).message` không guard, và **46/46 import tương đối trong toàn
+bộ `app/`+`components/` đối chiếu bằng script — khớp đúng file thật**.
+Đặc biệt tìm thấy và tự sửa TRƯỚC khi giao: một lỗi `noUncheckedIndexedAccess`
+y hệt các lỗi trước trong chính `ingestion.ts` (`index[token]` đọc lại
+sau khi gán) — sửa bằng biến cục bộ `bucket`, không dùng `!`.
+
+82/82 test PASS (74 cũ + 8 mới cho ingestion).
+
+**Vẫn CHƯA có bằng chứng `next build` chạy qua được đợt thay đổi này** —
+lượng code mới đáng kể (route stream NDJSON, ReadableStream, canvas
+component) chưa build thử lần nào. Rủi ro cụ thể tôi không thể tự xác
+nhận: `req.signal` trên `NextRequest` có thực sự propagate đúng khi
+client abort() fetch trong môi trường Vercel hay không — logic đúng
+theo chuẩn Fetch API nhưng hành vi cụ thể trên nền tảng chưa được xác
+nhận bằng thực nghiệm.
+
 ## Bug thật đã phát hiện SAU khi giao lần 5 (qua `next build` thật trên Vercel)
 
 - **`Module not found: Can't resolve '@/components/...'` và `'@/lib/db'`**

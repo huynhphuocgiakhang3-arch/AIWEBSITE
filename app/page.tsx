@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Composer } from '../components/chat/Composer';
 import { MessageList, type ChatMessage } from '../components/chat/MessageList';
+import { HeroVisual } from '../components/ui/HeroVisual';
 
 const QUICK_ACTIONS = ['Xây dựng', 'Phân tích', 'Gỡ lỗi', 'Thiết kế', 'Tối ưu'];
 
@@ -41,6 +42,9 @@ export default function HomePage() {
 
   return (
     <div className="main-scroll">
+      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <HeroVisual />
+      </div>
       <div style={{ maxWidth: 640, margin: '0 auto 28px', textAlign: 'center' }}>
         <h1 style={{ fontSize: '1.7rem', margin: '0 0 6px', fontWeight: 600 }}>Chào bạn 👋</h1>
         <p style={{ color: 'var(--hpgk-muted)', margin: 0, fontSize: '0.92rem' }}>

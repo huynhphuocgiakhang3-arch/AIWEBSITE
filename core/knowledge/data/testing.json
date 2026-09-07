@@ -1,0 +1,64 @@
+[
+  {
+    "id": "testing-pyramid",
+    "domain": "testing",
+    "title": "Test Pyramid — Tỉ lệ hợp lý giữa các loại test",
+    "concept": "Test pyramid là mô hình phân bổ tỉ lệ test theo 3 tầng: nhiều unit test nhất (nhanh, rẻ, kiểm tra logic cô lập), ít hơn integration test (kiểm tra nhiều phần phối hợp với nhau, chậm hơn), và ít nhất end-to-end test (kiểm tra toàn bộ hệ thống qua giao diện thật, chậm nhất và dễ vỡ nhất).",
+    "why": "Đảo ngược tỉ lệ này (nhiều E2E, ít unit test) là nguyên nhân phổ biến khiến test suite chậm chạp (hàng chục phút cho mỗi lần chạy), không ổn định (flaky — pass/fail ngẫu nhiên không do lỗi thật), và khó debug (một E2E test fail có thể do bất kỳ đâu trong toàn bộ pipeline, không chỉ rõ nguyên nhân).",
+    "how": "Unit test: kiểm tra một hàm/module cô lập, mock mọi dependency bên ngoài, chạy trong mili-giây. Integration test: kiểm tra vài module thực sự phối hợp (ví dụ API route + database thật trong môi trường test), chạy trong giây. E2E test: kiểm tra luồng người dùng thật qua trình duyệt thật (Playwright/Cypress), chỉ dùng cho các luồng nghiệp vụ quan trọng nhất (đăng ký, thanh toán) chứ không phải mọi tính năng nhỏ.",
+    "when_to_use": [
+      "Luôn áp dụng cho dự án có test suite đang phát triển — kiểm tra định kỳ tỉ lệ giữa các loại test có đang lệch quá nhiều về phía E2E hay không"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": [],
+    "best_practices": [
+      "Logic nghiệp vụ phức tạp (tính toán, validation, transformation dữ liệu) nên tách thành hàm thuần (pure function) để test bằng unit test đơn giản, không cần mock phức tạp",
+      "Chỉ viết E2E test cho luồng nghiệp vụ CRITICAL — nếu một tính năng nhỏ hỏng, chấp nhận phát hiện qua unit/integration test thay vì cố phủ hết bằng E2E"
+    ],
+    "patterns": ["Test pyramid tự nhiên hình thành khi logic được tách lớp rõ ràng (pure function riêng khỏi I/O) — kiến trúc tốt làm testing tự nhiên dễ và đúng tỉ lệ hơn"],
+    "anti_patterns": ["'Ice cream cone' anti-pattern: rất nhiều E2E test, gần như không có unit test — test suite chậm, dễ vỡ, mỗi lần CI chạy mất hàng chục phút"],
+    "common_mistakes": ["Viết integration test cho logic lẽ ra chỉ cần unit test (mock database không cần thiết cho một hàm tính toán thuần tuý không đụng tới I/O)"],
+    "failure_modes": ["Flaky E2E test bị mọi người mặc định retry cho tới khi pass thay vì điều tra nguyên nhân — dần dần cả team mất niềm tin vào toàn bộ test suite"],
+    "debugging": ["Khi một test fail ngẫu nhiên không nhất quán, đầu tiên kiểm tra: test có phụ thuộc thứ tự chạy, thời gian thực (setTimeout không mock), hay trạng thái chia sẻ giữa các test hay không"],
+    "security": [],
+    "performance": ["Test suite nhanh (nhiều unit test, ít E2E) là yếu tố quyết định tốc độ vòng lặp phát triển — feedback loop chậm làm giảm năng suất trực tiếp"],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": ["Unit test nhiều, cô lập tốt nhưng không phát hiện được lỗi tích hợp giữa các module; E2E test bao phủ thực tế hơn nhưng chậm và dễ vỡ — cần cả ba tầng, không tầng nào thay thế hoàn toàn tầng khác"],
+    "related": [],
+    "confidence": 87,
+    "provenance": ["curated"],
+    "version": "1.0"
+  },
+  {
+    "id": "testing-flaky-tests",
+    "domain": "testing",
+    "title": "Xử lý Flaky Test",
+    "concept": "Flaky test là test cho kết quả không nhất quán (lúc pass lúc fail) dù code không hề thay đổi giữa các lần chạy — nguyên nhân thường là phụ thuộc vào thời gian thực, thứ tự chạy test, trạng thái chia sẻ giữa các test, hoặc race condition trong chính code async đang được test.",
+    "why": "Flaky test phá huỷ giá trị cốt lõi của việc test tự động: nếu một test đôi khi fail dù code đúng, developer sẽ mất dần niềm tin và bắt đầu bỏ qua CI fail ('chắc lại flaky thôi') — tới khi một fail THẬT xảy ra, nó cũng bị bỏ qua theo thói quen đó.",
+    "how": "Nguyên nhân phổ biến nhất: setTimeout/thời gian thực không được mock (dùng fake timer thay vì chờ thời gian thật); thứ tự test phụ thuộc lẫn nhau qua biến/state toàn cục (mỗi test phải tự thiết lập và dọn dẹp trạng thái riêng, độc lập hoàn toàn với test khác); race condition thật trong code async (test lộ ra một bug thật, không phải lỗi của test).",
+    "when_to_use": [
+      "Bất kỳ khi nào một test được retry mà không rõ nguyên nhân fail lần đầu — dấu hiệu cần điều tra ngay, không nên bỏ qua"
+    ],
+    "when_not_to_use": [],
+    "prerequisites": [],
+    "best_practices": [
+      "Chạy test nghi ngờ flaky lặp lại nhiều lần liên tiếp (ví dụ 50-100 lần) trong môi trường cô lập để tái hiện tỉ lệ fail thực tế, thay vì đoán nguyên nhân từ một lần fail duy nhất",
+      "Dùng clock/timer injection (dependency injection như trong core/agent/pipeline.ts của chính dự án này) để test logic phụ thuộc thời gian mà không cần chờ thời gian thật"
+    ],
+    "patterns": ["Test isolation triệt để: mỗi test tạo dữ liệu/trạng thái riêng (ví dụ thư mục tạm unique như trong lib/db.test.ts), không bao giờ chia sẻ state với test khác dù chạy song song hay tuần tự"],
+    "anti_patterns": ["Thêm retry tự động cho test hay fail thay vì điều tra nguyên nhân gốc — retry che giấu vấn đề thay vì giải quyết nó, và có thể che giấu một race condition THẬT trong production code"],
+    "common_mistakes": ["Test phụ thuộc vào thứ tự chạy ngầm định của test runner (test B giả định test A đã chạy trước và để lại state nào đó) — test runner có quyền chạy test theo bất kỳ thứ tự nào, kể cả song song"],
+    "failure_modes": ["CI pass ở nhánh main nhưng fail ngẫu nhiên ở pull request khác chạy song song — thường do tài nguyên chia sẻ (port cố định, file cố định thay vì file tạm unique) giữa các lần chạy test song song"],
+    "debugging": ["Chạy test đơn lẻ, cô lập hoàn toàn khỏi test suite còn lại — nếu vẫn flaky khi chạy một mình, nguyên nhân nằm trong chính test/code đó, không phải do ảnh hưởng từ test khác"],
+    "security": [],
+    "performance": [],
+    "accessibility": [],
+    "examples": [],
+    "tradeoffs": [],
+    "related": ["testing-pyramid"],
+    "confidence": 85,
+    "provenance": ["curated"],
+    "version": "1.0"
+  }
+]

@@ -21,7 +21,9 @@ export type KnowledgeDomain =
   | 'devops'
   | 'architecture'
   | 'accessibility'
-  | 'testing';
+  | 'testing'
+  | 'seo'
+  | 'animation';
 
 export interface KnowledgeExample {
   /** Mô tả ngắn ví dụ này minh hoạ điều gì */

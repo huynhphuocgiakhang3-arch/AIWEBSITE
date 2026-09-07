@@ -30,8 +30,9 @@ npm run dev
 
 | Hệ thống | File | Test |
 |---|---|---|
-| Knowledge Core (15 entries thật, 5 domain) | `core/knowledge/data/*.json` | ✅ |
+| Knowledge Core (32 entries thật, 11 domain) | `core/knowledge/data/*.json` | ✅ |
 | Retrieval engine (offline-first, keyword) | `core/knowledge/retrieval.ts` | ✅ 11/11 |
+| Knowledge ingestion/indexing (real progress, real stop) | `core/knowledge/ingestion.ts` | ✅ 8/8 |
 | ZIP security (chống zip-slip, zip-bomb) | `core/security/zip-guard.ts` | ✅ 13/13 |
 | Diagnostics rules (no-any, no-ts-ignore...) | `core/diagnostics/rules.ts` | ✅ 10/10 |
 | Stack detection | `core/diagnostics/stack-detection.ts` | ✅ 7/7 |

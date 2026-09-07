@@ -1,8 +1,8 @@
 {
   "name": "hpgk-agent",
-  "version": "2.2.0",
+  "version": "2.3.2",
   "private": true,
-  "description": "HPGK — focused AI coding assistant with Gemini project editing and GitHub deployment.",
+  "description": "HPGK — verified Gemini chat, project editing, GitHub deployment.",
   "type": "module",
   "scripts": {
     "dev": "next dev",

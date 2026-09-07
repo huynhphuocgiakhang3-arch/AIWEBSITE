@@ -1,28 +1,219 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-type Message={role:'user'|'assistant';content:string}; type Conversation={id:string;title:string;updatedAt:string;messages?:Message[]}; type FileItem={path:string;content:string}; type ApiState='checking'|'ready'|'missing'|'error';
-const starters: ReadonlyArray<readonly [string,string,string]> = [['Tạo website','Tạo một website hoàn chỉnh từ ý tưởng của tôi','✦'],['Sửa project','Kiểm tra và sửa project hiện tại','⌘'],['Giải thích code','Giải thích đoạn code hoặc kiến trúc này','◇'],['Nghiên cứu','Tìm hiểu công nghệ và cách triển khai','◎']];
-const LH='hpgk-history-v23',LP='hpgk-project-v23';
-function rel(iso:string){const d=Math.max(0,Date.now()-new Date(iso).getTime());if(d<6e4)return'vừa xong';if(d<36e5)return`${Math.floor(d/6e4)} phút trước`;if(d<864e5)return`${Math.floor(d/36e5)} giờ trước`;return`${Math.floor(d/864e5)} ngày trước`}
-function slug(v:string){return v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s-_]/g,'').trim().replace(/\s+/g,'-').slice(0,48)||'hpgk-project'}
-function starterProject(prompt:string):FileItem[]{const title=prompt.replace(/\s+/g,' ').trim().slice(0,80)||'HPGK Project';return[{path:'README.md',content:`# ${title}\n\nCreated with HPGK.\n`},{path:'package.json',content:JSON.stringify({name:slug(title),private:true,version:'1.0.0',scripts:{dev:'next dev',build:'next build',start:'next start'},dependencies:{next:'latest',react:'latest','react-dom':'latest'}},null,2)},{path:'app/page.tsx',content:`export default function Home(){return <main><h1>${title.replace(/[<>]/g,'')}</h1><p>Built with HPGK.</p></main>}`},{path:'app/layout.tsx',content:`export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="vi"><body>{children}</body></html>}`},{path:'app/globals.css',content:`*{box-sizing:border-box}html,body{margin:0;background:#0b0d12;color:#f4f5f7;font-family:Inter,system-ui,sans-serif}body{min-height:100vh}main{min-height:100vh;display:grid;place-content:center;padding:48px}`}]}
-export default function Home(){
- const[open,setOpen]=useState(false),[convs,setConvs]=useState<Conversation[]>([]),[cid,setCid]=useState<string|null>(null),[msgs,setMsgs]=useState<Message[]>([]),[input,setInput]=useState(''),[model,setModel]=useState('gemini-3.8-flash'),[key,setKey]=useState(''),[keyOpen,setKeyOpen]=useState(false),[api,setApi]=useState<ApiState>('checking'),[apiMsg,setApiMsg]=useState('Đang kiểm tra Gemini…'),[ghOpen,setGhOpen]=useState(false),[ghToken,setGhToken]=useState(''),[repo,setRepo]=useState(''),[priv,setPriv]=useState(true),[deploying,setDeploying]=useState(false),[project,setProject]=useState<FileItem[]>([]),[projectName,setProjectName]=useState(''),[edit,setEdit]=useState(false),[sending,setSending]=useState(false),[toast,setToast]=useState(''),[menu,setMenu]=useState(false);const ref=useRef<HTMLTextAreaElement>(null);
- useEffect(()=>{try{setConvs(JSON.parse(localStorage.getItem(LH)||'[]'));const p=JSON.parse(localStorage.getItem(LP)||'null');if(p?.files?.length){setProjectName(p.name);setProject(p.files)}}catch{} void check();},[]);
- useEffect(()=>{if(!repo&&projectName)setRepo(projectName)},[projectName,repo]);
- function notify(x:string){setToast(x);setTimeout(()=>setToast(''),2600)} function saveHist(a:Conversation[]){setConvs(a);localStorage.setItem(LH,JSON.stringify(a.slice(0,100)))} function saveProject(n:string,f:FileItem[]){setProjectName(n);setProject(f);localStorage.setItem(LP,JSON.stringify({name:n,files:f}))}
- function append(id:string,m:Message,title?:string){const old=convs.find(c=>c.id===id);saveHist([{id,title:old?.title||title||m.content.slice(0,72),updatedAt:new Date().toISOString(),messages:[...(old?.messages||[]),m]},...convs.filter(c=>c.id!==id)])}
- async function check(k=key){setApi('checking');setApiMsg('Đang kiểm tra kết nối thật…');try{const r=await fetch('/api/gemini/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({apiKey:k||undefined,model})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Gemini chưa sẵn sàng.');setApi('ready');setApiMsg(`Đã test thành công · ${d.model}`);return true}catch(e){const m=e instanceof Error?e.message:'Không thể kiểm tra Gemini.';setApi(m.includes('key')||m.includes('Chưa có')?'missing':'error');setApiMsg(m);return false}}
- function newChat(){setCid(null);setMsgs([]);setInput('');setEdit(false);setOpen(false);setMenu(false);setTimeout(()=>ref.current?.focus(),60)}
- async function openChat(id:string){const c=convs.find(x=>x.id===id);if(c?.messages){setCid(id);setMsgs(c.messages);setOpen(false);return}try{const r=await fetch(`/api/conversations/${id}`),d=await r.json();if(!r.ok)throw Error();setCid(id);setMsgs(d.conversation.messages||[]);setOpen(false)}catch{notify('Không thể mở cuộc trò chuyện.')}} 
- async function ensure(text:string){if(cid)return cid;const id=crypto.randomUUID();setCid(id);saveHist([{id,title:text.slice(0,72),updatedAt:new Date().toISOString(),messages:[]},...convs]);try{await fetch('/api/conversations',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,message:text})})}catch{}return id}
- async function send(){const text=input.trim();if(!text||sending)return;setInput('');setSending(true);const id=await ensure(text),u:Message={role:'user',content:text};setMsgs(x=>[...x,u]);append(id,u,text);try{if(edit){const files=project.length?project:starterProject(text);if(!project.length)saveProject(slug(text),files);const r=await fetch('/api/gemini/edit',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({apiKey:key||undefined,model,instruction:text,files})}),d=await r.json();if(!r.ok)throw Error(d.error||'Gemini không thể sửa project.');const map=new Map(files.map(f=>[f.path,f.content]));for(const op of d.operations||[]){if(op.action==='delete')map.delete(op.path);else map.set(op.path,op.content||'')}const next=Array.from(map,([path,content])=>({path,content}));saveProject(projectName||slug(text),next);const a:Message={role:'assistant',content:`${d.summary||'Đã cập nhật project.'}\n\nĐã thay đổi ${d.operations?.length||0} file.`};setMsgs(x=>[...x,a]);append(id,a);notify('Gemini đã sửa project trực tiếp.')}else{if(api!=='ready'&&!await check())throw Error('Gemini chưa sẵn sàng. Mở Gemini để kiểm tra API key.');const r=await fetch('/api/gemini/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({apiKey:key||undefined,model,messages:[{role:'system',content:'You are HPGK, a helpful senior coding assistant. Answer in the user language. Be concise and practical. Distinguish discussion from actual project edits.'},...msgs,u]})}),d=await r.json();if(!r.ok)throw Error(d.error||'Gemini request failed.');const a:Message={role:'assistant',content:d.content};setMsgs(x=>[...x,a]);append(id,a)}}catch(e){const m=e instanceof Error?e.message:'Có lỗi xảy ra.';setApi('error');setApiMsg(m);const a:Message={role:'assistant',content:`Không thực hiện được.\n\n${m}`};setMsgs(x=>[...x,a]);append(id,a);if(/gemini|api key|chưa có/i.test(m))setKeyOpen(true)}finally{setSending(false)}}
- async function deploy(){if(!ghToken)return notify('Nhập GitHub token trước.');if(!project.length)return notify('Chưa có project để deploy.');setDeploying(true);try{const r=await fetch('/api/github/deploy',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:ghToken,repoName:repo||projectName||'hpgk-project',private:priv,files:project})}),d=await r.json();if(!r.ok)throw Error(d.error||'Deploy thất bại.');setGhToken('');setGhOpen(false);notify(`Đã upload ${d.uploaded} file lên GitHub.`);window.open(d.repository,'_blank','noopener,noreferrer')}catch(e){notify(e instanceof Error?e.message:'Deploy thất bại.')}finally{setDeploying(false)}}
- return <div className="app">{open&&<button className="backdrop" onClick={()=>setOpen(false)} aria-label="Đóng lịch sử"/>}<aside className={`sidebar ${open?'open':''}`}><div className="sideHead"><div className="brand"><span>✦</span><b>HPGK</b></div><button className="icon" onClick={()=>setOpen(false)}>×</button></div><button className="newChat" onClick={newChat}>＋ <span>Cuộc trò chuyện mới</span></button><div className="search">⌕ <span>Tìm kiếm</span></div><div className="history">{convs.length?convs.map(c=><button className={`historyItem ${c.id===cid?'active':''}`} key={c.id} onClick={()=>void openChat(c.id)}><span>◈</span><div><b>{c.title}</b><small>{rel(c.updatedAt)}</small></div></button>):<div className="empty">Chưa có cuộc trò chuyện.<br/>Các cuộc trò chuyện mới sẽ xuất hiện ở đây.</div>}</div><div className="sideStatus"><i className={api}/><div><b>{api==='ready'?'Gemini đang hoạt động':'Gemini chưa kết nối'}</b><small>{apiMsg}</small></div><button className="icon" onClick={()=>setKeyOpen(true)}>⚙</button></div></aside>
- <main className="main"><header className="top"><button className="icon menu" onClick={()=>setOpen(true)}>☰</button><span className="title">{msgs.length?(convs.find(c=>c.id===cid)?.title||'Cuộc trò chuyện'):'HPGK'}</span><div className="topRight"><button className={`model ${api}`} onClick={()=>setKeyOpen(true)}><i className={api}/><span>Gemini</span><em>⌄</em></button><button className="deploy" onClick={()=>setGhOpen(true)}>↗ <span>Deploy</span></button><button className="icon">•••</button><span className="avatar">G</span></div></header>
- {msgs.length===0?<section className="welcome"><div className="logo">✦</div><div className="eyebrow">AI CODING ASSISTANT</div><h1>Xin chào, Gia Khang.</h1><p>Tớ có thể trò chuyện với Gemini, viết code, tạo project, sửa trực tiếp project và deploy lên GitHub khi m yêu cầu.</p><div className="caps"><span>✓ Chat</span><span>✓ Tạo project</span><span>✓ Sửa code</span><span>✓ GitHub</span></div><div className="starters">{starters.map(([a,b,c])=><button key={a} onClick={()=>{setInput(b);setTimeout(()=>ref.current?.focus(),50)}}><i>{c}</i><b>{a}</b><small>{b}</small><em>→</em></button>)}</div></section>:<section className="chat"><div className="messages">{msgs.map((m,i)=><div className={`msg ${m.role}`} key={i}><div className="msgAvatar">{m.role==='assistant'?'✦':'G'}</div><div><small>{m.role==='assistant'?'HPGK':'Bạn'}</small><div className="text">{m.content}</div></div></div>)}{sending&&<div className="msg assistant"><div className="msgAvatar">✦</div><div><small>HPGK</small><div className="typing"><i/><i/><i/></div></div></div>}</div></section>}
- <div className="composerWrap">{project.length>0&&<div className="project"><i className="ready"/><b>{projectName}</b><span>{project.length} files</span><button onClick={()=>setEdit(x=>!x)}>{edit?'Đang sửa':'Sửa project'}</button><button onClick={()=>setGhOpen(true)}>Deploy</button></div>}<div className="composer"><button className="plus" onClick={()=>setMenu(x=>!x)}>＋</button><textarea ref={ref} rows={1} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void send()}}} placeholder={edit?'Mô tả thay đổi muốn Gemini thực hiện…':'Nhắn tin cho HPGK…'}/><button className="cm" onClick={()=>setKeyOpen(true)}>Gemini⌄</button><button className={`send ${input.trim()?'on':''}`} disabled={!input.trim()||sending} onClick={()=>void send()}>↑</button></div>{menu&&<div className="addMenu"><button onClick={()=>{setEdit(false);setMenu(false)}}>✦ Chat với Gemini</button><button onClick={()=>{setEdit(true);setMenu(false);if(!project.length)notify('Chưa có project. Hãy bắt đầu bằng “Tạo website”.')}}>⌘ Sửa project bằng Gemini</button><button onClick={()=>{const f=starterProject('Premium web project');saveProject('premium-web-project',f);setEdit(true);setMenu(false);notify('Đã tạo project mới.')}}>＋ Tạo project mới</button></div>}<div className="note">HPGK · {api==='ready'?'Gemini đã kiểm tra kết nối':'Gemini chưa được xác thực'} · Enter để gửi</div></div></main>
- {keyOpen&&<Modal title="Gemini" close={()=>setKeyOpen(false)}><p>HPGK sẽ dùng <b>GEMINI_API_KEY</b> trên Vercel nếu có. Nếu chưa, nhập key cho phiên này. Nút kiểm tra thực hiện một request thật tới Gemini trước khi báo sẵn sàng.</p><label>API key <small>(để trống nếu Vercel đã có key)</small><input type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="AIza…"/></label><label>Model<input value={model} onChange={e=>setModel(e.target.value)}/></label><div className={`check ${api}`}><i className={api}/><span><b>{api==='ready'?'Gemini hoạt động':api==='checking'?'Đang kiểm tra':'Chưa sẵn sàng'}</b><small>{apiMsg}</small></span></div><div className="actions"><button onClick={()=>setKeyOpen(false)}>Đóng</button><button className="primary" onClick={()=>void check()}>Kiểm tra kết nối</button></div></Modal>}
- {ghOpen&&<Modal title="Deploy to GitHub" close={()=>!deploying&&setGhOpen(false)}><p>Chỉ hỏi token khi m muốn deploy. Token chỉ được dùng cho request deploy và không lưu vào localStorage.</p><label>GitHub token<input type="password" value={ghToken} onChange={e=>setGhToken(e.target.value)} placeholder="github_pat_…" autoFocus/></label><label>Repository name<input value={repo} onChange={e=>setRepo(e.target.value)} placeholder={projectName||'hpgk-project'}/></label><label className="checkBox"><input type="checkbox" checked={priv} onChange={e=>setPriv(e.target.checked)}/> Repository private</label><div className="actions"><button onClick={()=>setGhOpen(false)} disabled={deploying}>Hủy</button><button className="primary" onClick={()=>void deploy()} disabled={deploying}>{deploying?'Đang deploy…':'Deploy'}</button></div></Modal>}{toast&&<div className="toast">{toast}</div>}</div>
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+type Message = { role: 'user' | 'assistant'; content: string };
+type Conversation = { id: string; title: string; updatedAt: string };
+type FileItem = { path: string; content: string };
+type Mode = 'chat' | 'edit';
+
+const suggestions = [
+  { icon: '⌘', title: 'Build a website', text: 'Tạo website hoàn chỉnh từ ý tưởng của tôi' },
+  { icon: '✦', title: 'Fix my project', text: 'Sửa lỗi và cải thiện project hiện tại' },
+  { icon: '◈', title: 'Explain code', text: 'Giải thích code, kiến trúc hoặc thuật toán' },
+  { icon: '◎', title: 'Research', text: 'Tìm hiểu một công nghệ hoặc cách triển khai' },
+];
+
+function slugify(value: string) { return value.toLowerCase().replace(/[^a-z0-9\s-_]/g, '').trim().replace(/\s+/g, '-').slice(0, 48) || 'hpgk-project'; }
+function makeStarter(prompt: string): FileItem[] {
+  const title = prompt.trim().replace(/\s+/g, ' ').slice(0, 80) || 'Premium AI Website';
+  return [
+    { path: 'README.md', content: `# ${title}\n\nCreated with HPGK.\n` },
+    { path: 'package.json', content: JSON.stringify({ name: slugify(title), private: true, version: '1.0.0', scripts: { dev: 'next dev', build: 'next build', start: 'next start' }, dependencies: { next: 'latest', react: 'latest', 'react-dom': 'latest' } }, null, 2) },
+    { path: 'app/page.tsx', content: `export default function Home(){\n  return <main><h1>${title.replace(/[<>]/g, '')}</h1><p>Built with HPGK.</p></main>;\n}\n` },
+    { path: 'app/layout.tsx', content: `export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="vi"><body>{children}</body></html>}\n` },
+    { path: 'app/globals.css', content: `*{box-sizing:border-box}html,body{margin:0;background:#070912;color:#fff;font-family:Inter,system-ui,sans-serif}body{min-height:100vh}main{min-height:100vh;display:grid;place-content:center;padding:48px}h1{font-size:clamp(40px,7vw,88px);letter-spacing:-.05em;max-width:900px}p{color:#9ba4b8;font-size:18px}` },
+  ];
 }
-function Modal({title,children,close}:{title:string;children:React.ReactNode;close:()=>void}){return <div className="overlay" onMouseDown={close}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modalHead"><h2>{title}</h2><button className="icon" onClick={close}>×</button></div>{children}</div></div>}
+
+export default function Home() {
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [model, setModel] = useState('Gemini');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [geminiModel, setGeminiModel] = useState('gemini-3.8-flash');
+  const [geminiStatus, setGeminiStatus] = useState<'idle' | 'checking' | 'ready' | 'error'>('idle');
+  const [geminiStatusTitle, setGeminiStatusTitle] = useState('Chưa kiểm tra');
+  const [geminiStatusDetail, setGeminiStatusDetail] = useState('Kiểm tra sẽ gửi một request thật tới Gemini.');
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [githubOpen, setGithubOpen] = useState(false);
+  const [githubToken, setGithubToken] = useState('');
+  const [repoName, setRepoName] = useState('');
+  const [privateRepo, setPrivateRepo] = useState(true);
+  const [deploying, setDeploying] = useState(false);
+  const [project, setProject] = useState<FileItem[]>([]);
+  const [projectName, setProjectName] = useState('');
+  const [mode, setMode] = useState<Mode>('chat');
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('hpgk-project-v22');
+      if (raw) { const data = JSON.parse(raw) as { name: string; files: FileItem[] }; setProjectName(data.name); setProject(data.files); }
+    } catch { /* ignore corrupt local state */ }
+    fetch('/api/conversations').then((r) => r.json()).then((d) => setConversations(d.conversations ?? [])).catch(() => {});
+  }, []);
+
+  useEffect(() => { if (!repoName && projectName) setRepoName(projectName); }, [projectName, repoName]);
+
+  const activeTitle = useMemo(() => conversations.find((c) => c.id === conversationId)?.title ?? '', [conversations, conversationId]);
+  function notify(text: string) { setToast(text); window.setTimeout(() => setToast(''), 2800); }
+  function newChat() { setConversationId(null); setMessages([]); setInput(''); setMode('chat'); setHistoryOpen(false); setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 80); }
+  async function openConversation(id: string) {
+    const res = await fetch(`/api/conversations/${id}`); const data = await res.json();
+    if (!res.ok) return notify(data.error ?? 'Không thể mở cuộc trò chuyện.');
+    setConversationId(id); setMessages(data.conversation.messages ?? []); setHistoryOpen(false);
+  }
+  async function persistMessage(id: string, message: Message) { await fetch(`/api/conversations/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message }) }); }
+  async function ensureConversation(userText: string) {
+    if (conversationId) return conversationId;
+    const res = await fetch('/api/conversations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: userText }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'Không tạo được cuộc trò chuyện.');
+    const id = data.conversation.id as string;
+    setConversationId(id);
+    setConversations((old) => [{ id, title: data.conversation.title, updatedAt: data.conversation.updatedAt }, ...old]);
+    return id;
+  }
+  function saveProject(name: string, files: FileItem[]) {
+    setProjectName(name); setProject(files); localStorage.setItem('hpgk-project-v22', JSON.stringify({ name, files }));
+  }
+  function createProjectFromPrompt(text: string) {
+    const files = makeStarter(text); saveProject(slugify(text), files); setMode('edit'); notify('Đã tạo project local. Gemini có thể sửa trực tiếp project này.');
+  }
+
+  async function checkGemini() {
+    setGeminiStatus('checking');
+    setGeminiStatusTitle('Đang kiểm tra Gemini…');
+    setGeminiStatusDetail('Đang xác thực key và gửi một request thật tới model.');
+    try {
+      const res = await fetch('/api/gemini/status', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ apiKey: geminiKey.trim() || undefined, model: geminiModel }), cache: 'no-store' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        setGeminiStatus('error');
+        setGeminiStatusTitle(data.title ?? 'Gemini chưa sẵn sàng');
+        setGeminiStatusDetail(data.detail ?? data.error ?? `Gemini HTTP ${res.status}`);
+        return false;
+      }
+      setGeminiStatus('ready');
+      setGeminiStatusTitle('Gemini đang hoạt động');
+      setGeminiStatusDetail(`Request thật tới ${data.model} đã thành công.`);
+      return true;
+    } catch (e) {
+      setGeminiStatus('error');
+      setGeminiStatusTitle('Không thể kiểm tra Gemini');
+      setGeminiStatusDetail(e instanceof Error ? e.message : 'Network error');
+      return false;
+    }
+  }
+
+  async function send(textOverride?: string) {
+    const text = (textOverride ?? input).trim();
+    if (!text || sending) return;
+    setInput(''); setSending(true);
+    const userMessage: Message = { role: 'user', content: text };
+    const id = await ensureConversation(text);
+    setMessages((m) => [...m, userMessage]);
+    if (id) await persistMessage(id, userMessage);
+
+    try {
+      if (mode === 'edit') {
+        if (!project.length) { createProjectFromPrompt(text); notify('Chưa có project — HPGK đã tạo starter để Gemini có thể chỉnh sửa.'); return; }
+        const res = await fetch('/api/gemini/edit', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ apiKey: geminiKey || undefined, model: geminiModel, instruction: text, files: project }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Gemini edit failed.');
+        const map = new Map(project.map((f) => [f.path, f.content]));
+        for (const op of data.operations ?? []) { if (op.action === 'delete') map.delete(op.path); else map.set(op.path, op.content ?? ''); }
+        const next = Array.from(map, ([path, content]) => ({ path, content })); saveProject(projectName || 'hpgk-project', next);
+        const answer = `${data.summary || 'Đã sửa project.'}\n\nĐã cập nhật ${data.operations?.length ?? 0} file.`;
+        const assistant = { role: 'assistant' as const, content: answer }; setMessages((m) => [...m, assistant]); await persistMessage(id, assistant); notify('Gemini đã sửa project trực tiếp.');
+      } else {
+        if (model === 'Gemini') {
+          const history = [...messages, userMessage].map((m) => ({ role: m.role, content: m.content }));
+          const res = await fetch('/api/gemini/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ apiKey: geminiKey || undefined, model: geminiModel, messages: [{ role: 'system', content: 'You are HPGK, a concise senior coding assistant. Answer in the user language. When asked to build or edit a project, explain what you would change and offer the project edit mode.' }, ...history] }) });
+          const data = await res.json(); if (!res.ok) throw new Error(data.error ?? 'Gemini request failed.');
+          const assistant = { role: 'assistant' as const, content: data.content }; setMessages((m) => [...m, assistant]); await persistMessage(id, assistant);
+        } else {
+          const assistant = { role: 'assistant' as const, content: 'HPGK local mode đang sẵn sàng. Chọn Gemini để bật suy luận thật, hoặc dùng “Chỉnh project” để sửa project hiện tại.' }; setMessages((m) => [...m, assistant]); await persistMessage(id, assistant);
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Có lỗi xảy ra.';
+      if (/API key|Gemini|PERMISSION_DENIED|denied access|403/i.test(message)) setKeyOpen(true);
+      const assistant = { role: 'assistant' as const, content: `Không thực hiện được: ${message}` }; setMessages((m) => [...m, assistant]); await persistMessage(id, assistant);
+    } finally { setSending(false); }
+  }
+
+  async function deployGithub() {
+    if (!githubToken.trim()) return notify('Nhập GitHub token trước.');
+    if (!project.length) return notify('Chưa có project để deploy.');
+    setDeploying(true);
+    try {
+      const res = await fetch('/api/github/deploy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: githubToken, repoName: repoName || projectName || 'hpgk-project', private: privateRepo, files: project }) });
+      const data = await res.json(); if (!res.ok) throw new Error(data.error ?? 'GitHub deploy failed.');
+      setGithubToken(''); setGithubOpen(false); notify(`Đã deploy ${data.uploaded} file lên GitHub.`);
+      window.open(data.repository, '_blank', 'noopener,noreferrer');
+    } catch (e) { notify(e instanceof Error ? e.message : 'Không thể deploy GitHub.'); } finally { setDeploying(false); }
+  }
+
+  function chooseSuggestion(text: string, title: string) {
+    if (title === 'Build a website') setMode('edit');
+    setInput(text); setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
+  return <div className="shell">
+    <aside className={`sidebar ${historyOpen ? 'open' : ''}`}>
+      <div className="sideTop"><button className="iconBtn" onClick={() => setHistoryOpen(false)} aria-label="Close sidebar">☰</button><div className="brand"><span className="brandMark">✦</span><span>HPGK</span></div><button className="iconBtn" onClick={() => newChat()} aria-label="New chat">＋</button></div>
+      <button className="newChat" onClick={newChat}><span>＋</span> Cuộc trò chuyện mới</button>
+      <div className="historySearch">⌕ <span>Tìm kiếm cuộc trò chuyện...</span><kbd>⌘K</kbd></div>
+      <div className="historyList">{conversations.length ? conversations.map((c) => <button key={c.id} className={`historyItem ${c.id === conversationId ? 'active' : ''}`} onClick={() => openConversation(c.id)}><span className="historyIcon">◈</span><span><b>{c.title}</b><small>{relative(c.updatedAt)}</small></span></button>) : <div className="historyEmpty">Các cuộc trò chuyện của bạn sẽ xuất hiện ở đây.</div>}</div>
+      <div className="sideBottom"><button className="profile"><span className="avatar">G</span><span><b>HPGK</b><small>{geminiKey ? 'Gemini ready' : 'Local mode'}</small></span><span className="more">•••</span></button></div>
+    </aside>
+
+    <main className="main">
+      <header className="topbar">
+        <button className="mobileMenu iconBtn" onClick={() => setHistoryOpen(true)}>☰</button>
+        <div className="crumb">{activeTitle || 'HPGK'}</div>
+        <div className="topActions">
+          <button className="modelBtn" onClick={() => setKeyOpen(true)}><span className={`statusDot ${geminiStatus}`}/><span>{model}</span><span>⌄</span></button>
+          <button className="githubBtn" onClick={() => setGithubOpen(true)}>◉ <span>Deploy to GitHub</span></button>
+          <button className="iconBtn" onClick={() => setMenuOpen((v) => !v)}>•••</button>
+          <span className="avatar topAvatar">G</span>
+        </div>
+      </header>
+
+      {messages.length === 0 ? <section className="welcome">
+        <div className="welcomeGlow" />
+        <div className="heroMark">✦</div>
+        <div className="eyebrow">AI CODING ASSISTANT</div>
+        <h1>Xin chào, Gia Khang.</h1>
+        <p>Tạo, sửa và hoàn thiện project cùng HPGK. Giao diện đơn giản như một cuộc trò chuyện — sức mạnh nằm phía sau.</p>
+        <div className="suggestions">{suggestions.map((s) => <button key={s.title} className="suggestion" onClick={() => chooseSuggestion(s.text, s.title)}><span className="suggestionIcon">{s.icon}</span><span><b>{s.title}</b><small>{s.text}</small></span><i>→</i></button>)}</div>
+      </section> : <section className="conversation"><div className="messages">{messages.map((m, i) => <div key={`${m.role}-${i}`} className={`message ${m.role}`}><div className="messageAvatar">{m.role === 'assistant' ? '✦' : 'G'}</div><div className="messageBody"><div className="messageName">{m.role === 'assistant' ? 'HPGK' : 'Bạn'}</div><div className="messageText">{m.content}</div></div></div>)}{sending && <div className="message assistant"><div className="messageAvatar">✦</div><div className="messageBody"><div className="messageName">HPGK</div><div className="typing"><i/><i/><i/></div></div></div>}</div></section>}
+
+      <div className="composerWrap">
+        {project.length > 0 && <div className="projectBar"><span className="dot"/><b>{projectName}</b><span>{project.length} files</span><button onClick={() => setMode(mode === 'edit' ? 'chat' : 'edit')}>{mode === 'edit' ? 'Chỉnh project' : 'Chat'}</button><button onClick={() => setGithubOpen(true)}>Deploy</button></div>}
+        <div className="composer">
+          <button className="plus" onClick={() => setMenuOpen((v) => !v)}>＋</button>
+          <textarea ref={inputRef} rows={1} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder={mode === 'edit' ? 'Mô tả thay đổi bạn muốn Gemini thực hiện...' : 'Nhập yêu cầu của bạn...'} />
+          <div className="composerRight"><button className="miniModel" onClick={() => setKeyOpen(true)}>✦ Gemini ⌄</button><button className={`send ${input.trim() ? 'ready' : ''}`} onClick={() => void send()} disabled={sending || !input.trim()}>↑</button></div>
+        </div>
+        {menuOpen && <div className="composerMenu"><button onClick={() => { setMode('chat'); setMenuOpen(false); }}>✦ Chat với Gemini</button><button onClick={() => { setMode('edit'); setMenuOpen(false); if (!project.length) notify('Hãy tạo project trước bằng “Build a website”.'); }}>⌘ Chỉnh project bằng Gemini</button><button onClick={() => { setMenuOpen(false); if (!project.length) createProjectFromPrompt('Premium AI coding project'); else notify('Project hiện tại đã sẵn sàng.'); }}>＋ Tạo project local</button></div>}
+        <div className="composerHint">HPGK · {geminiStatus === 'ready' ? 'Gemini đang hoạt động' : 'Gemini chưa được xác thực'} · Không lưu API key vào trình duyệt</div>
+      </div>
+    </main>
+
+    {keyOpen && <Modal title="Gemini" onClose={() => setKeyOpen(false)}><p className="modalLead">HPGK không coi việc có API key là đủ. Nút kiểm tra bên dưới sẽ xác thực key, kiểm tra project và gọi <b>generateContent thật</b> trước khi báo xanh. Key nhập ở đây chỉ dùng cho phiên này.</p><label>Gemini API key <small>(để trống nếu Vercel đã có GEMINI_API_KEY)</small><input type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} placeholder="AIza… / auth key" autoFocus /></label><label>Model<input value={geminiModel} onChange={(e) => setGeminiModel(e.target.value)} /></label><div className={`geminiCheck ${geminiStatus}`}><span className="statusDot"/><div><b>{geminiStatusTitle}</b><small>{geminiStatusDetail}</small></div></div><div className="modalActions"><button onClick={() => setKeyOpen(false)}>Đóng</button><button className="primary" onClick={() => void checkGemini()} disabled={geminiStatus === 'checking'}>{geminiStatus === 'checking' ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}</button></div></Modal>}
+    {githubOpen && <Modal title="Deploy to GitHub" onClose={() => !deploying && setGithubOpen(false)}><p className="modalLead">HPGK sẽ dùng token bạn nhập để tạo/cập nhật repository và upload project. Token không được lưu.</p><label>GitHub token<input type="password" value={githubToken} onChange={(e) => setGithubToken(e.target.value)} placeholder="github_pat_..." autoFocus /></label><label>Repository name<input value={repoName} onChange={(e) => setRepoName(e.target.value)} placeholder={projectName || 'hpgk-project'} /></label><label className="check"><input type="checkbox" checked={privateRepo} onChange={(e) => setPrivateRepo(e.target.checked)} /> Repository private</label><div className="modalActions"><button onClick={() => setGithubOpen(false)} disabled={deploying}>Hủy</button><button className="primary" onClick={() => void deployGithub()} disabled={deploying}>{deploying ? 'Đang deploy…' : 'Deploy'}</button></div></Modal>}
+    {toast && <div className="toast">{toast}</div>}
+  </div>;
+}
+
+function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) { return <div className="overlay" onMouseDown={onClose}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modalHead"><h2>{title}</h2><button className="iconBtn" onClick={onClose}>×</button></div>{children}</div></div>; }
+function relative(iso: string) { const d = Date.now() - new Date(iso).getTime(); if (d < 60_000) return 'vừa xong'; if (d < 3_600_000) return `${Math.floor(d / 60_000)} phút trước`; if (d < 86_400_000) return `${Math.floor(d / 3_600_000)} giờ trước`; return `${Math.floor(d / 86_400_000)} ngày trước`; }

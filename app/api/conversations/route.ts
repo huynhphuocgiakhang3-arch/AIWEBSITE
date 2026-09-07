@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (!message) return NextResponse.json({ error: 'Thiếu message.' }, { status: 400 });
   const now = new Date().toISOString();
   const record: ConversationRecord = {
-    id: typeof body.id === 'string' && body.id ? body.id : crypto.randomUUID(),
+    id: crypto.randomUUID(),
     title: message.slice(0, 72),
     messages: [{ role: 'user', content: message }],
     createdAt: now,

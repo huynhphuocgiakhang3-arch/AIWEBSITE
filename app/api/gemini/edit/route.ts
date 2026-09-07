@@ -28,14 +28,13 @@ export async function POST(req: NextRequest) {
 
   const prompt = `You are HPGK, a senior software engineer. Modify the provided project to satisfy the user's request. Return ONLY valid JSON matching this shape: {"summary":"short Vietnamese summary","operations":[{"action":"write","path":"relative/path","content":"full file content"},{"action":"delete","path":"relative/path"}]}. Only include files that must change. Preserve the existing architecture unless the request requires otherwise. Never write outside the project, never touch .git, and never include markdown fences.\n\nUSER REQUEST:\n${instruction}\n\nPROJECT FILES:\n${files.map((f) => `--- ${f.path}\n${f.content}`).join('\n')}`;
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        maxOutputTokens: 32768,
-        thinkingConfig: { thinkingLevel: 'high' },
+        maxOutputTokens: 16000,
         responseMimeType: 'application/json',
         responseSchema: {
           type: 'object',

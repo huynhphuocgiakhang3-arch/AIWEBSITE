@@ -1,8 +1,7 @@
 node_modules
 .next
-.env*
-!.env.example
-data/*.json
-data/workspaces/*
-!data/.gitkeep
-!data/workspaces/.gitkeep
+out
+.env
+.env.local
+.DS_Store
+npm-debug.log*

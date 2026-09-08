@@ -1,3 +1,0 @@
-import {NextRequest,NextResponse} from 'next/server';import path from 'node:path';import {scaffoldProject} from '../../../core/projects/scaffold';import {createJsonTable} from '../../../lib/db';
-const root=process.env.HPGK_DATA_DIR??path.join(process.cwd(),'data');const table=createJsonTable<any>(root,'projects');
-export async function POST(req:NextRequest){const b=await req.json();const built=await scaffoldProject(path.join(root,'workspaces'),String(b.name??'hpgk-project'));const rec={id:crypto.randomUUID(),name:built.name,status:'ready',path:built.path,files:built.files,createdAt:new Date().toISOString()};await table.insert(rec);return NextResponse.json({project:rec,message:'Project scaffold created.'})}

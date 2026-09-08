@@ -1,0 +1,3 @@
+import {NextRequest,NextResponse} from 'next/server';
+export const runtime='nodejs';
+export async function POST(req:NextRequest){try{const {token,projectId,teamId}=await req.json();if(!token||!projectId)return NextResponse.json({error:'Thiếu token/projectId'},{status:400});const q=new URLSearchParams({projectId,limit:'5'});if(teamId)q.set('teamId',teamId);const r=await fetch(`https://api.vercel.com/v6/deployments?${q}`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)return NextResponse.json({error:d.error?.message||`Vercel ${r.status}`},{status:r.status});return NextResponse.json(d)}catch(e){return NextResponse.json({error:e instanceof Error?e.message:'monitor failed'},{status:500})}}

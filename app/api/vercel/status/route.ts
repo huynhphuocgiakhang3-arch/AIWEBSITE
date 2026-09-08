@@ -1,0 +1,3 @@
+import {NextRequest,NextResponse} from 'next/server';
+export const runtime='nodejs';
+export async function GET(req:NextRequest){const token=req.nextUrl.searchParams.get('token');const id=req.nextUrl.searchParams.get('id');const teamId=req.nextUrl.searchParams.get('teamId');if(!token||!id)return NextResponse.json({error:'Thiếu token/deployment id'},{status:400});const u=new URL(`https://api.vercel.com/v13/deployments/${encodeURIComponent(id)}`);if(teamId)u.searchParams.set('teamId',teamId);const r=await fetch(u,{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(!r.ok)return NextResponse.json({error:d.error?.message||`Vercel ${r.status}`},{status:r.status});return NextResponse.json(d)}

@@ -1,30 +1,43 @@
-# HPGK Agent v2.2 — Focused AI Coding Assistant
+# KHANGHUYNH // VERCEL FORENSIC ENGINE v3
 
-HPGK v2.2 is intentionally focused: a premium chat UI, conversation history, Gemini chat/project editing, and GitHub deployment.
+A real deployment-forensics web app for Vercel projects. Vietnamese UI, ZIP/project ingestion, deterministic root-cause analysis, conservative safe-fix gate, GitHub atomic commit, Vercel deployment trigger and live deployment/event monitoring.
 
-## Features
-- Chat-first UI with hamburger history + new chat button.
-- Optional Gemini integration via `GEMINI_API_KEY` or a per-session key entered in the UI.
-- Gemini can return structured file operations so HPGK can edit the current project directly.
-- Local project state is kept in the browser for the demo workflow.
-- GitHub deployment asks for a token only when you choose Deploy; the token is not persisted.
-- Responsive desktop/mobile UI.
+## Core promise
 
-## Run
+**Do not guess. Do not redesign the user's project. Do not auto-edit UI topology.**
 
-```bash
-npm install
-npm run dev
-```
+The engine records a baseline of the uploaded source tree. Safe patches are rejected if they change the detected UI file topology. Only deterministic patches with explicit rules are eligible for auto-fix.
 
-For server-side Gemini:
+## Flow
 
-```bash
-GEMINI_API_KEY=your_key_here
-GEMINI_MODEL=gemini-3.7-flash
-```
+1. Upload ZIP or project folder.
+2. Paste the Vercel log.
+3. Run forensic scan.
+4. Review concise root-cause findings with file/line and confidence.
+5. Optional safe auto-fix.
+6. Push one atomic Git commit to GitHub.
+7. Trigger/monitor Vercel deployment with a live timer.
+8. If deployment fails, ingest build events and run another forensic cycle.
+9. Stop when READY, when no deterministic fix exists, or after the configured cycle limit.
 
-Do not expose the Gemini key in client-side code. HPGK accepts a session key only for the current requests and does not store it in localStorage.
+## Important architecture limitation
 
-## GitHub token
-The deploy endpoint uses GitHub REST API. For an existing repository, the token needs Contents write permission. Creating a new repository may require the appropriate repository administration permission. See GitHub's current fine-grained token permissions.
+A browser/Vercel serverless function cannot reliably reproduce every arbitrary user build environment. v3 therefore treats **Vercel itself as the final build oracle**. The local engine performs static and deterministic checks; the Vercel build/events are the authoritative deployment verification step.
+
+For a future worker edition, add an isolated build runner/container to execute `npm/pnpm/yarn build` before pushing.
+
+## GitHub
+
+The app uses GitHub's Git Database flow: read branch ref → create tree → create commit → update branch. A fine-grained token needs repository Contents write permission.
+
+## Security
+
+- Tokens are held in browser state and sent only to the relevant server route.
+- No token is written to a database by this source.
+- `.env*`, `.git`, `node_modules`, `.next` are excluded from uploaded source.
+- Never paste a token into a public log.
+- Rotate a token immediately if it is accidentally exposed.
+
+## Branding
+
+Every generated release archive and root project directory is branded **Khanghuynh**.

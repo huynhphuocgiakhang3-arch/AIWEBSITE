@@ -1,0 +1,3 @@
+Khanghuynh
+VERCEL FORENSIC ENGINE v3
+Deterministic deployment forensics • Safe patch gate • GitHub atomic commit • Vercel live monitor
